@@ -55,7 +55,7 @@ function StatCard({ icon: Icon, label, value, color = OG, bg = OGB }) {
 }
 
 // ─── Course Progress Card ─────────────────────────────────────────────────────
-function CourseCard({ enrollment, navigate }) {
+function CourseCard({ enrollment, navigate, setTab }) {
   const course = enrollment.courses
   if (!course) return null
   const pct = enrollment.progress_pct || 0
@@ -64,7 +64,7 @@ function CourseCard({ enrollment, navigate }) {
 
   return (
     <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #DDDDDD', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'pointer' }}
-      onClick={() => navigate(`/learn/${course.id}`)}
+      onClick={() => pct === 100 ? setTab('certificates') : navigate(`/learn/${course.id}`)}
       onMouseEnter={e => { e.currentTarget.style.borderColor = OGL; e.currentTarget.style.boxShadow = '0 8px 30px rgba(232,89,12,0.1)'; e.currentTarget.style.transform = 'translateY(-3px)' }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = '#DDDDDD'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}
     >
@@ -99,7 +99,7 @@ function CourseCard({ enrollment, navigate }) {
 
         {/* CTA */}
         <button style={{ width: '100%', padding: '10px', borderRadius: 9, border: 'none', background: pct === 100 ? '#f0fdf4' : `linear-gradient(135deg, ${OG}, ${OG2})`, color: pct === 100 ? '#16a34a' : '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: pct === 100 ? 'none' : '0 4px 12px rgba(232,89,12,0.25)', transition: 'all 0.2s' }}>
-          {pct === 100 ? <><HiOutlineCheck size={14} /> Review Course</> : pct === 0 ? <><HiOutlinePlay size={14} /> Start Learning</> : <><HiOutlinePlay size={14} /> Continue</>}
+          {pct === 100 ? <><HiOutlineStar size={14} /> View Certificate</> : pct === 0 ? <><HiOutlinePlay size={14} /> Start Learning</> : <><HiOutlinePlay size={14} /> Continue</>}
         </button>
       </div>
     </div>
@@ -122,8 +122,8 @@ function CertificateCard({ cert, navigate }) {
         <div style={{ fontSize: 14, fontWeight: 700, color: '#08060d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course.title}</div>
         <div style={{ fontSize: 12, color: '#6b6375', marginTop: 3 }}>Issued {new Date(cert.issued_at || cert.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#fff', border: `1px solid ${OGL}`, fontSize: 12, fontWeight: 700, color: OG, flexShrink: 0, cursor: 'pointer' }}>
-        <HiOutlineDocument size={13} /> Download
+      <div onClick={() => navigate(`/certificate?id=${cert.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#fff', border: `1px solid ${OGL}`, fontSize: 12, fontWeight: 700, color: OG, flexShrink: 0, cursor: 'pointer' }}>
+        <HiOutlineDocument size={13} /> View & Download
       </div>
     </div>
   )
@@ -138,11 +138,13 @@ export default function StudentDashboard() {
   const [certificates, setCertificates] = useState([])
   const [loading, setLoading]       = useState(true)
   const [activeTab, setActiveTab]   = useState('courses')
+  const [userId, setUserId]         = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { navigate('/auth'); return }
       setUser(session.user)
+      setUserId(session.user.id)
       loadData(session.user.id)
     })
     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -151,20 +153,36 @@ export default function StudentDashboard() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
+  // Re-fetch certificates every time the tab is switched to 'certificates'
+  useEffect(() => {
+    if (activeTab === 'certificates' && userId) {
+      fetchCertificates(userId)
+    }
+  }, [activeTab, userId])
+
+  const fetchCertificates = async (userId) => {
+    // Fetch certs without join first, then manually attach course titles
+    const { data: certData } = await supabase
+      .from('certificates').select('*')
+      .eq('user_id', userId)
+      .order('issued_at', { ascending: false })
+    if (!certData?.length) { setCertificates([]); return }
+    // Fetch course titles for each cert
+    const courseIds = [...new Set(certData.map(c => c.course_id).filter(Boolean))]
+    const { data: coursesData } = await supabase.from('courses').select('id, title').in('id', courseIds)
+    const courseMap = Object.fromEntries((coursesData || []).map(c => [c.id, c]))
+    setCertificates(certData.map(cert => ({ ...cert, courses: courseMap[cert.course_id] || null })))
+  }
+
   const loadData = async (userId) => {
-    const [{ data: profileData }, { data: enrollData }, certResult] = await Promise.all([
+    const [{ data: profileData }, { data: enrollData }] = await Promise.all([
       supabase.from('users').select('name, email, role').eq('id', userId).single(),
       supabase.from('enrollments').select('*, courses(id, title, domain, level, duration, is_free)').eq('user_id', userId).order('created_at', { ascending: false }),
-      supabase.from('certificates').select('*, courses(id, title)').eq('user_id', userId).order('created_at', { ascending: false }),
     ])
-    if (profileData?.role === 'admin') {
-      navigate('/admin')
-      return
-    }
+    if (profileData?.role === 'admin') { navigate('/admin'); return }
     if (profileData) setProfile(profileData)
     setEnrollments(enrollData || [])
-    // certificates table may not exist yet — fail silently
-    setCertificates(certResult.data || [])
+    await fetchCertificates(userId)
     setLoading(false)
   }
 
@@ -289,7 +307,7 @@ export default function StudentDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
                   {inProgress.map((e, i) => (
                     <div key={e.id} style={{ animation: `fadeUp 0.4s ease ${i * 0.06}s both` }}>
-                      <CourseCard enrollment={e} navigate={navigate} />
+                      <CourseCard enrollment={e} navigate={navigate} setTab={setActiveTab} />
                     </div>
                   ))}
                 </div>
@@ -303,7 +321,7 @@ export default function StudentDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
                   {notStarted.map((e, i) => (
                     <div key={e.id} style={{ animation: `fadeUp 0.4s ease ${i * 0.06}s both` }}>
-                      <CourseCard enrollment={e} navigate={navigate} />
+                      <CourseCard enrollment={e} navigate={navigate} setTab={setActiveTab} />
                     </div>
                   ))}
                 </div>
@@ -317,7 +335,7 @@ export default function StudentDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
                   {completed.map((e, i) => (
                     <div key={e.id} style={{ animation: `fadeUp 0.4s ease ${i * 0.06}s both` }}>
-                      <CourseCard enrollment={e} navigate={navigate} />
+                      <CourseCard enrollment={e} navigate={navigate} setTab={setActiveTab} />
                     </div>
                   ))}
                 </div>

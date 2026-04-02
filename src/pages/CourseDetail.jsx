@@ -157,7 +157,7 @@ function CurriculumSection({ modules, isEnrolled }) {
 }
 
 // ─── Sticky enroll card ───────────────────────────────────────────────────────
-function EnrollCard({ course, enrolled, enrolling, onEnroll, user, navigate }) {
+function EnrollCard({ course, enrolled, progressPct = 0, enrolling, onEnroll, user, navigate }) {
   const domainColor = course.domain === 'QA Engineering' ? OG : '#7c3aed'
 
   return (
@@ -177,9 +177,15 @@ function EnrollCard({ course, enrolled, enrolling, onEnroll, user, navigate }) {
 
         {/* CTA */}
         {enrolled ? (
-          <button onClick={() => navigate(`/learn/${course.id}`)} style={{ width: '100%', padding: '14px', borderRadius: 11, border: 'none', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(34,197,94,0.3)', marginBottom: 12 }}>
-            <HiOutlinePlay size={16} /> Continue Learning
-          </button>
+          progressPct === 100 ? (
+            <button onClick={() => navigate('/dashboard')} style={{ width: '100%', padding: '14px', borderRadius: 11, border: 'none', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(34,197,94,0.3)', marginBottom: 12 }}>
+              <HiOutlineStar size={16} /> View Certificate
+            </button>
+          ) : (
+            <button onClick={() => navigate(`/learn/${course.id}`)} style={{ width: '100%', padding: '14px', borderRadius: 11, border: 'none', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(34,197,94,0.3)', marginBottom: 12 }}>
+              <HiOutlinePlay size={16} /> Continue Learning
+            </button>
+          )
         ) : (
           <button onClick={() => user ? onEnroll() : navigate('/auth')} disabled={enrolling} style={{ width: '100%', padding: '14px', borderRadius: 11, border: 'none', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 15, fontWeight: 700, cursor: enrolling ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 18px rgba(232,89,12,0.35)', marginBottom: 12, opacity: enrolling ? 0.8 : 1, transition: 'all 0.2s' }}>
             {enrolling ? 'Enrolling…' : course.is_free ? 'Enroll for Free' : 'Enroll Now'}
@@ -226,6 +232,7 @@ export default function CourseDetail() {
   const [user, setUser]         = useState(null)
   const [profile, setProfile]   = useState(null)
   const [enrolled, setEnrolled] = useState(false)
+  const [progressPct, setProgressPct] = useState(0)
   const [enrolling, setEnrolling] = useState(false)
 
   useEffect(() => {
@@ -267,8 +274,9 @@ export default function CourseDetail() {
   }
 
   const checkEnrolled = async (userId) => {
-    const { data } = await supabase.from('enrollments').select('id').eq('user_id', userId).eq('course_id', courseId).single()
+    const { data } = await supabase.from('enrollments').select('id, progress_pct').eq('user_id', userId).eq('course_id', courseId).single()
     setEnrolled(!!data)
+    if (data) setProgressPct(data.progress_pct || 0)
   }
 
   const handleEnroll = async () => {
@@ -366,6 +374,7 @@ export default function CourseDetail() {
             <EnrollCard
               course={course}
               enrolled={enrolled}
+              progressPct={progressPct}
               enrolling={enrolling}
               onEnroll={handleEnroll}
               user={user}
@@ -442,9 +451,15 @@ export default function CourseDetail() {
           }
         </div>
         {enrolled ? (
-          <button onClick={() => navigate(`/learn/${courseId}`)} style={{ padding: '12px 28px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
-            <HiOutlinePlay size={15} /> Continue
-          </button>
+          progressPct === 100 ? (
+            <button onClick={() => navigate('/dashboard')} style={{ padding: '12px 28px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+              View Certificate
+            </button>
+          ) : (
+            <button onClick={() => navigate(`/learn/${courseId}`)} style={{ padding: '12px 28px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+              <HiOutlinePlay size={15} /> Continue
+            </button>
+          )
         ) : (
           <button onClick={() => user ? handleEnroll() : navigate('/auth')} disabled={enrolling} style={{ padding: '12px 28px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,89,12,0.3)', opacity: enrolling ? 0.8 : 1 }}>
             {enrolling ? 'Enrolling…' : course.is_free ? 'Enroll Free' : 'Enroll Now'}

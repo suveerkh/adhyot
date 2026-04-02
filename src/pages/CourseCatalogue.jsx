@@ -83,9 +83,12 @@ function CourseCard({ course, enrolled, onEnroll, user }) {
 
   const domainColor = course.domain === 'QA Engineering' ? OG : '#7c3aed'
   const domainBg    = course.domain === 'QA Engineering' ? OGB : '#f5f3ff'
+  const pct         = enrolled?.progress_pct || 0
+  const isCompleted = pct === 100
+  const isEnrolled  = !!enrolled
 
   const handleClick = () => {
-    if (enrolled) {
+    if (isEnrolled) {
       navigate(`/learn/${course.id}`)
     } else if (course.is_free) {
       if (!user) { navigate('/auth'); return }
@@ -121,9 +124,9 @@ function CourseCard({ course, enrolled, onEnroll, user }) {
           <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 100, background: '#f4f5f7', color: '#6b6375' }}>
             {course.level}
           </span>
-          {enrolled && (
-            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: '#dcfce7', color: '#16a34a', marginLeft: 'auto' }}>
-              Enrolled
+          {isEnrolled && (
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: isCompleted ? '#dcfce7' : OGB, color: isCompleted ? '#16a34a' : OG, marginLeft: 'auto' }}>
+              {isCompleted ? 'Completed' : 'Enrolled'}
             </span>
           )}
         </div>
@@ -162,13 +165,13 @@ function CourseCard({ course, enrolled, onEnroll, user }) {
             onClick={e => { e.stopPropagation(); handleClick() }}
             style={{
               padding: '9px 20px', borderRadius: 9, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              background: enrolled ? '#dcfce7' : `linear-gradient(135deg, ${OG}, ${OG2})`,
-              color: enrolled ? '#16a34a' : '#fff',
-              boxShadow: enrolled ? 'none' : '0 4px 12px rgba(232,89,12,0.3)',
+              background: isCompleted ? '#dcfce7' : isEnrolled ? `linear-gradient(135deg, ${OG}, ${OG2})` : `linear-gradient(135deg, ${OG}, ${OG2})`,
+              color: isCompleted ? '#16a34a' : '#fff',
+              boxShadow: isCompleted || !isEnrolled ? 'none' : '0 4px 12px rgba(232,89,12,0.3)',
               transition: 'all 0.2s',
             }}
           >
-            {enrolled ? 'Continue' : course.is_free ? 'Enroll Free' : 'View Course'}
+            {isCompleted ? 'Completed ✓' : isEnrolled ? 'Continue' : course.is_free ? 'Enroll Free' : 'View Course'}
           </button>
         </div>
       </div>
@@ -222,7 +225,7 @@ export default function CourseCatalogue() {
   const [loading, setLoading]       = useState(true)
   const [user, setUser]             = useState(null)
   const [profile, setProfile]       = useState(null)
-  const [enrollments, setEnrollments] = useState([])  // courseIds student is enrolled in
+  const [enrollments, setEnrollments] = useState([])  // {course_id, progress_pct}
   const [enrolling, setEnrolling]   = useState(false)
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [search, setSearch]         = useState('')
@@ -259,8 +262,8 @@ export default function CourseCatalogue() {
   }
 
   const fetchEnrollments = async (userId) => {
-    const { data } = await supabase.from('enrollments').select('course_id').eq('user_id', userId)
-    setEnrollments((data || []).map(e => e.course_id))
+    const { data } = await supabase.from('enrollments').select('course_id, progress_pct').eq('user_id', userId)
+    setEnrollments(data || [])
   }
 
   const handleLogout = async () => {
@@ -277,7 +280,7 @@ export default function CourseCatalogue() {
       if (!existing.data) {
         await supabase.from('enrollments').insert([{ user_id: user.id, course_id: course.id }])
       }
-      setEnrollments(prev => prev.includes(course.id) ? prev : [...prev, course.id])
+      setEnrollments(prev => prev.find(e => e.course_id === course.id) ? prev : [...prev, { course_id: course.id, progress_pct: 0 }])
       setSelectedCourse(null)
       setEnrolling(false)
       navigate(`/learn/${course.id}`)
@@ -420,7 +423,7 @@ export default function CourseCatalogue() {
               <div key={course.id} style={{ animation: `fadeUp 0.4s ease ${i * 0.05}s both` }}>
                 <CourseCard
                   course={course}
-                  enrolled={enrollments.includes(course.id)}
+                  enrolled={enrollments.find(e => e.course_id === course.id)}
                   onEnroll={setSelectedCourse}
                   user={user}
                 />

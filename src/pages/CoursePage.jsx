@@ -495,6 +495,7 @@ export default function CoursePage() {
   const [showLockedToast, setShowLockedToast] = useState(false)
   const [userId, setUserId]           = useState(null)
   const userIdRef = useRef(null)
+  const [isAdmin, setIsAdmin]         = useState(false)
 
   // Load course + auth + progress from DB
   useEffect(() => {
@@ -503,6 +504,12 @@ export default function CoursePage() {
       const uid = session?.user?.id || null
       setUserId(uid)
       userIdRef.current = uid
+
+      // Check if admin — admins get all lessons unlocked
+      if (uid) {
+        const { data: profile } = await supabase.from('users').select('role').eq('id', uid).single()
+        if (profile?.role === 'admin') setIsAdmin(true)
+      }
 
       const { data: courseData } = await supabase.from('courses').select('*').eq('id', courseId).single()
       setCourse(courseData)
@@ -600,12 +607,13 @@ export default function CoursePage() {
 
   // Can a lesson be accessed?
   const canAccessLesson = useCallback((lesson, allLessons) => {
+    if (isAdmin) return true  // admins can access any lesson freely
     const idx = allLessons.findIndex(l => l.id === lesson.id)
     if (idx === 0) return true  // first lesson always accessible
     const prevLesson = allLessons[idx - 1]
     // Must have completed previous lesson
     return !!completed[prevLesson.id]
-  }, [completed])
+  }, [completed, isAdmin])
 
   const allLessons = modules.flatMap(m => m.lessons)
   const totalLessons = allLessons.length
@@ -613,7 +621,7 @@ export default function CoursePage() {
   const nextLesson = currentIdx < allLessons.length - 1 ? allLessons[currentIdx + 1] : null
   const prevLesson = currentIdx > 0 ? allLessons[currentIdx - 1] : null
 
-  const hasUnpassedQuiz = blocks.some(b => (b.type === 'quiz' || b.type === 'assessment') && !quizPassed[activeLesson?.id])
+  const hasUnpassedQuiz = !isAdmin && blocks.some(b => (b.type === 'quiz' || b.type === 'assessment') && !quizPassed[activeLesson?.id])
 
   const markComplete = useCallback(async (lessonId) => {
     const newCompleted = { ...completed, [lessonId]: true }
@@ -626,8 +634,8 @@ export default function CoursePage() {
       // upsert enrollment row in case it doesn't exist yet (e.g. admin previewing)
       await supabase.from('enrollments')
         .upsert({ user_id: uid, course_id: courseId, progress_pct: pct }, { onConflict: 'user_id,course_id' })
-      // issue certificate if 100%
-      if (pct === 100) {
+      // issue certificate if 100% and course has certificate enabled
+      if (pct === 100 && course?.has_certificate !== false) {
         await issueCertificate(uid, courseId)
       }
     }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   HiOutlineHome, HiOutlineUsers, HiOutlineBookOpen,
   HiOutlineCreditCard, HiOutlineLogout, HiOutlinePlus,
-  HiOutlinePencil, HiOutlineTrash, HiOutlineX,
+  HiOutlinePencil, HiOutlineTrash, HiOutlineX, HiOutlineEye,
 } from 'react-icons/hi'
 import supabase from '../supabaseClient'
 
@@ -58,6 +58,21 @@ function Sidebar({ active, setActive, onLogout, adminName }) {
             {label}
           </button>
         ))}
+
+        <div style={{ height: 1, background: '#1f2937', margin: '8px 0' }} />
+
+        <a href="/courses" target="_blank" rel="noreferrer" style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '10px 12px', borderRadius: 10,
+          color: '#9ca3af', fontSize: 14, fontWeight: 500,
+          textDecoration: 'none', transition: 'all 0.2s',
+          borderLeft: '3px solid transparent',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af' }}
+        >
+          <HiOutlineEye size={18} /> Preview Courses Page
+        </a>
       </nav>
 
       {/* Admin info + logout */}
@@ -125,7 +140,7 @@ function Overview({ stats }) {
 function CourseModal({ course, onClose, onSave }) {
   const [form, setForm] = useState(course || {
     title: '', domain: 'QA Engineering', description: '',
-    level: 'Beginner', price: 0, is_free: false, is_published: false,
+    level: 'Beginner', price: 0, is_free: false, is_published: false, has_certificate: true,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -210,6 +225,11 @@ function CourseModal({ course, onClose, onSave }) {
               <input type="checkbox" checked={form.is_published}
                 onChange={e => update('is_published', e.target.checked)} />
               Published
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#1A1A1A' }}>
+              <input type="checkbox" checked={form.has_certificate ?? true}
+                onChange={e => update('has_certificate', e.target.checked)} />
+              Issue Certificate
             </label>
           </div>
 
@@ -317,6 +337,11 @@ function CoursesSection() {
                     color: course.is_published ? '#16a34a' : '#6b7280',
                   }}>{course.is_published ? 'Published' : 'Draft'}</span>
                   {course.is_free && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, fontWeight: 600, background: '#dbeafe', color: '#2563eb' }}>Free</span>}
+                  <span style={{
+                    fontSize: 11, padding: '2px 8px', borderRadius: 100, fontWeight: 600,
+                    background: course.has_certificate !== false ? '#FFF3EC' : '#f3f4f6',
+                    color: course.has_certificate !== false ? '#E8590C' : '#9ca3af',
+                  }}>{course.has_certificate !== false ? 'Certificate' : 'No Certificate'}</span>
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#08060d', marginBottom: 2 }}>{course.title}</div>
                 <div style={{ fontSize: 13, color: '#6b6375' }}>{course.level} · {course.is_free ? 'Free' : `₹${course.price?.toLocaleString()}`}</div>
@@ -455,7 +480,8 @@ function PaymentsSection() {
       setLoading(true)
       const { data } = await supabase
         .from('enrollments')
-        .select('*, users(name, email), courses(title)')
+        .select('*, users!inner(name, email, role), courses(title)')
+        .eq('users.role', 'student')
         .order('created_at', { ascending: false })
       setPayments(data || [])
       setLoading(false)
@@ -545,7 +571,7 @@ export default function AdminDashboard() {
       const [{ count: students }, { count: courses }, { count: enrollments }] = await Promise.all([
         supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'student'),
         supabase.from('courses').select('*', { count: 'exact', head: true }),
-        supabase.from('enrollments').select('*', { count: 'exact', head: true }),
+        supabase.from('enrollments').select('*, users!inner(role)', { count: 'exact', head: true }).eq('users.role', 'student'),
       ])
       setStats({ students: students || 0, courses: courses || 0, enrollments: enrollments || 0, revenue: 0 })
     }

@@ -8,6 +8,7 @@ import CourseCatalogue from './pages/CourseCatalogue'
 import CourseDetail from './pages/CourseDetail'
 import CoursePage from './pages/CoursePage'
 import StudentDashboard from './pages/StudentDashboard'
+import CertificatePage from './pages/CertificatePage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -27,6 +28,11 @@ function App() {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <StudentDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/certificate" element={
+          <ProtectedRoute>
+            <CertificatePage />
           </ProtectedRoute>
         } />
         <Route path="/admin" element={
