@@ -84,105 +84,18 @@ function CertificatePreview({ cert, profile }) {
 }
 
 // ─── Download as PDF using jsPDF + SVG ───────────────────────────────────────
-async function downloadCertificate(cert, profile) {
+async function downloadCertificate(cert, profile, svgRef) {
   const studentName = profile?.name || 'Student'
-  const courseName  = cert.courses?.title || 'Course'
-  const issueDate   = new Date(cert.issued_at || cert.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-  const certId      = cert.certificate_id || cert.id?.slice(0, 16).toUpperCase()
-
-  // A4 landscape: 297 x 210 mm
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const html2canvas = (await import('html2canvas')).default
+  const canvas = await html2canvas(svgRef, { scale: 3, useCORS: true, backgroundColor: '#ffffff' })
+  const imgData = canvas.toDataURL('image/png')
+  const { jsPDF: PDF } = await import('jspdf')
+  const doc = new PDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const W = 297, H = 210
-
-  // Background
-  doc.setFillColor(255, 255, 255)
-  doc.rect(0, 0, W, H, 'F')
-
-  // Orange border frame
-  doc.setDrawColor(232, 89, 12)
-  doc.setLineWidth(1.5)
-  doc.roundedRect(6, 6, W - 12, H - 12, 3, 3, 'S')
-  doc.setLineWidth(0.4)
-  doc.roundedRect(9, 9, W - 18, H - 18, 2, 2, 'S')
-
-  // Orange bars (top/bottom/left/right)
-  doc.setFillColor(232, 89, 12)
-  doc.rect(6, 6, W - 12, 2.5, 'F')       // top
-  doc.rect(6, H - 8.5, W - 12, 2.5, 'F') // bottom
-  doc.rect(6, 6, 2.5, H - 12, 'F')       // left
-  doc.rect(W - 8.5, 6, 2.5, H - 12, 'F') // right
-
-  // Certificate of completion
-  doc.setTextColor(156, 163, 175)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  doc.text('CERTIFICATE OF COMPLETION', W / 2, 30, { align: 'center', charSpace: 2 })
-
-  // Divider
-  doc.setDrawColor(232, 89, 12)
-  doc.setLineWidth(0.4)
-  doc.line(W / 2 - 60, 56, W / 2 + 60, 56)
-
-  // "This certifies that"
-  doc.setTextColor(107, 99, 117)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.text('This certifies that', W / 2, 68, { align: 'center' })
-
-  // Student name
-  doc.setTextColor(8, 6, 13)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(28)
-  doc.text(studentName, W / 2, 90, { align: 'center' })
-
-  // Underline name
-  doc.setDrawColor(232, 89, 12)
-  doc.setLineWidth(0.8)
-  doc.line(W / 2 - 55, 94, W / 2 + 55, 94)
-
-  // "has successfully completed"
-  doc.setTextColor(107, 99, 117)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.text('has successfully completed the course', W / 2, 106, { align: 'center' })
-
-  // Course name
-  doc.setTextColor(232, 89, 12)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.text(courseName, W / 2, 124, { align: 'center' })
-
-  // Issue date
-  doc.setTextColor(156, 163, 175)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.text(`Issued on ${issueDate}`, W / 2, 138, { align: 'center' })
-
-  // Horizontal divider
-  doc.setDrawColor(221, 221, 221)
-  doc.setLineWidth(0.3)
-  doc.line(30, 150, W - 30, 150)
-
-  // Seal center
-  doc.setDrawColor(232, 89, 12)
-  doc.setLineWidth(1)
-  doc.circle(W / 2, 168, 14, 'S')
-  doc.setLineWidth(0.3)
-  doc.circle(W / 2, 168, 11, 'S')
-  doc.setTextColor(232, 89, 12)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(5.5)
-  doc.text('ADHYOT', W / 2, 167, { align: 'center', charSpace: 1 })
-  doc.setFontSize(4.5)
-  doc.text('CERTIFIED', W / 2, 172, { align: 'center', charSpace: 0.5 })
-
-  // Certificate ID
-  doc.setTextColor(156, 163, 175)
-  doc.setFont('courier', 'normal')
-  doc.setFontSize(6)
-  doc.text(`ID: ${certId}`, W / 2, 198, { align: 'center' })
-
-  doc.save(`Adhyot_Certificate_${studentName.replace(/\s+/g, '_')}.pdf`)
+  const imgH = (canvas.height / canvas.width) * W
+  const yOffset = Math.max(0, (H - imgH) / 2)
+  doc.addImage(imgData, 'PNG', 0, yOffset, W, imgH)
+  doc.save('Adhyot_Certificate_' + studentName.replace(/\s+/g, '_') + '.pdf')
 }
 
 // ─── Main CertificatePage ─────────────────────────────────────────────────────
@@ -194,6 +107,7 @@ export default function CertificatePage() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
+  const svgRef = useRef(null)
 
   useEffect(() => {
     const load = async () => {
@@ -221,7 +135,7 @@ export default function CertificatePage() {
 
     const handleDownload = async () => {
     setDownloading(true)
-    try { await downloadCertificate(cert, profile) }
+    try { await downloadCertificate(cert, profile, svgRef.current) }
     finally { setDownloading(false) }
   }
 
@@ -262,7 +176,7 @@ export default function CertificatePage() {
       <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 5%', animation: 'fadeUp 0.5s ease both' }}>
 
         {/* Certificate preview */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+        <div ref={svgRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
           <CertificatePreview cert={cert} profile={profile} />
         </div>
 

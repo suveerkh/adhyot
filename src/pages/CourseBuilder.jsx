@@ -155,36 +155,115 @@ function VideoBlock({ block, onChange }) {
 
 function TextBlock({ block, onChange }) {
   const c = block.content || {}
-  const exec = (cmd, val) => { document.execCommand(cmd, false, val) }
-  const toolbarBtns = [
-    { label: 'B', title: 'Bold', action: () => exec('bold'), style: { fontWeight: 700 } },
-    { label: 'I', title: 'Italic', action: () => exec('italic'), style: { fontStyle: 'italic' } },
-    { label: 'U', title: 'Underline', action: () => exec('underline'), style: { textDecoration: 'underline' } },
-    { label: 'H2', title: 'Heading 2', action: () => exec('formatBlock', 'h2') },
-    { label: 'H3', title: 'Heading 3', action: () => exec('formatBlock', 'h3') },
-    { label: '¶', title: 'Paragraph', action: () => exec('formatBlock', 'p') },
-    { label: '• List', title: 'Bullet list', action: () => exec('insertUnorderedList') },
-    { label: '1. List', title: 'Numbered list', action: () => exec('insertOrderedList') },
-    { label: '""', title: 'Blockquote', action: () => exec('formatBlock', 'blockquote') },
-    { label: '—', title: 'Horizontal rule', action: () => exec('insertHorizontalRule') },
+  const editorRef = useRef(null)
+  const [activeFormats, setActiveFormats] = useState({})
+  const [isFocused, setIsFocused] = useState(false)
+
+  // Set HTML only on mount — never re-set it after that (prevents cursor reset)
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = c.html || '<p>Start typing your content here...</p>'
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateActiveFormats = () => {
+    setActiveFormats({
+      bold:               document.queryCommandState('bold'),
+      italic:             document.queryCommandState('italic'),
+      underline:          document.queryCommandState('underline'),
+      insertUnorderedList: document.queryCommandState('insertUnorderedList'),
+      insertOrderedList:  document.queryCommandState('insertOrderedList'),
+      h2:         document.queryCommandValue('formatBlock') === 'h2',
+      h3:         document.queryCommandValue('formatBlock') === 'h3',
+      blockquote: document.queryCommandValue('formatBlock') === 'blockquote',
+    })
+  }
+
+  const exec = (cmd, val) => {
+    editorRef.current?.focus()
+    // Toggle blockquote: if already active, switch back to paragraph
+    if (cmd === 'formatBlock' && val === 'blockquote' && document.queryCommandValue('formatBlock') === 'blockquote') {
+      document.execCommand('formatBlock', false, 'p')
+    } else {
+      document.execCommand(cmd, false, val || null)
+    }
+    setTimeout(() => {
+      updateActiveFormats()
+      onChange({ ...c, html: editorRef.current?.innerHTML || '' })
+    }, 0)
+  }
+
+  const TOOLBAR = [
+    { id: 'bold',      label: 'B',       title: 'Bold (Ctrl+B)',     cmd: 'bold',                style: { fontWeight: 800 } },
+    { id: 'italic',    label: 'I',       title: 'Italic (Ctrl+I)',   cmd: 'italic',              style: { fontStyle: 'italic' } },
+    { id: 'underline', label: 'U',       title: 'Underline (Ctrl+U)',cmd: 'underline',           style: { textDecoration: 'underline' } },
+    { sep: true },
+    { id: 'h2',        label: 'H2',      title: 'Heading 2',         cmd: 'formatBlock', val: 'h2' },
+    { id: 'h3',        label: 'H3',      title: 'Heading 3',         cmd: 'formatBlock', val: 'h3' },
+    { id: 'p',         label: '¶',       title: 'Paragraph',         cmd: 'formatBlock', val: 'p'  },
+    { sep: true },
+    { id: 'insertUnorderedList', label: '• List',  title: 'Bullet list',   cmd: 'insertUnorderedList' },
+    { id: 'insertOrderedList',   label: '1. List', title: 'Numbered list', cmd: 'insertOrderedList'   },
+    { sep: true },
+    { id: 'blockquote', label: '❝', title: 'Blockquote (click again to remove)', cmd: 'formatBlock', val: 'blockquote' },
+    { id: 'hr',         label: '—', title: 'Horizontal divider',                 cmd: 'insertHorizontalRule' },
   ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <style>{`
+        .rte-editor ul  { list-style-type: disc;    padding-left: 26px; margin: 8px 0; }
+        .rte-editor ol  { list-style-type: decimal; padding-left: 26px; margin: 8px 0; }
+        .rte-editor li  { margin: 3px 0; line-height: 1.75; }
+        .rte-editor ul ul { list-style-type: circle; }
+        .rte-editor h2  { font-size: 20px; font-weight: 700; margin: 14px 0 6px; color: #08060d; font-family: Georgia, serif; line-height: 1.3; }
+        .rte-editor h3  { font-size: 16px; font-weight: 700; margin: 12px 0 4px; color: #08060d; line-height: 1.4; }
+        .rte-editor p   { margin: 5px 0; }
+        .rte-editor blockquote { border-left: 4px solid #E8590C; margin: 12px 0; padding: 8px 16px; background: #FFF3EC; border-radius: 0 8px 8px 0; color: #c2410c; font-style: italic; }
+        .rte-editor hr  { border: none; border-top: 1.5px solid #e5e7eb; margin: 16px 0; }
+        .rte-editor b, .rte-editor strong { font-weight: 700; }
+        .rte-editor a   { color: #E8590C; text-decoration: underline; }
+        .rte-editor:empty:before { content: attr(data-placeholder); color: #9ca3af; pointer-events: none; }
+      `}</style>
       <div>
         <label style={labelStyle}>Content</label>
-        <div style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
-          <div style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: '6px 10px', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {toolbarBtns.map(btn => (
-              <button key={btn.label} title={btn.title} onMouseDown={e => { e.preventDefault(); btn.action() }}
-                style={{ padding: '4px 10px', borderRadius: 5, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#374151', ...btn.style }}>
-                {btn.label}
-              </button>
-            ))}
+        <div style={{
+          border: isFocused ? '1.5px solid #E8590C' : '1.5px solid #e5e7eb',
+          borderRadius: 8, overflow: 'hidden', transition: 'border-color 0.2s, box-shadow 0.2s',
+          boxShadow: isFocused ? '0 0 0 3px rgba(232,89,12,0.12)' : 'none',
+        }}>
+          {/* Toolbar */}
+          <div style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: '6px 10px', display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+            {TOOLBAR.map((btn, idx) => btn.sep
+              ? <div key={idx} style={{ width: 1, height: 18, background: '#e5e7eb', margin: '0 3px', flexShrink: 0 }} />
+              : <button
+                  key={btn.id}
+                  title={btn.title}
+                  onMouseDown={e => { e.preventDefault(); exec(btn.cmd, btn.val) }}
+                  style={{
+                    padding: '4px 10px', borderRadius: 5, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                    border: activeFormats[btn.id] ? '1.5px solid #E8590C' : '1px solid #e5e7eb',
+                    background: activeFormats[btn.id] ? '#FFF3EC' : '#fff',
+                    color: activeFormats[btn.id] ? '#E8590C' : '#374151',
+                    transition: 'all 0.15s',
+                    ...btn.style,
+                  }}>
+                  {btn.label}
+                </button>
+            )}
           </div>
+          {/* Editor — NO dangerouslySetInnerHTML after mount */}
           <div
-            contentEditable suppressContentEditableWarning
-            dangerouslySetInnerHTML={{ __html: c.html || '<p>Start typing your content here...</p>' }}
-            onBlur={e => onChange({ ...c, html: e.currentTarget.innerHTML })}
+            ref={editorRef}
+            className="rte-editor"
+            contentEditable
+            suppressContentEditableWarning
+            data-placeholder="Start typing your content here..."
+            onFocus={() => { setIsFocused(true); updateActiveFormats() }}
+            onBlur={e => { setIsFocused(false); onChange({ ...c, html: e.currentTarget.innerHTML }) }}
+            onKeyUp={updateActiveFormats}
+            onMouseUp={updateActiveFormats}
+            onSelect={updateActiveFormats}
             style={{ minHeight: 220, padding: '14px', fontSize: 14, lineHeight: 1.9, color: '#1A1A1A', outline: 'none', fontFamily: 'system-ui' }}
           />
         </div>
@@ -293,10 +372,17 @@ const OGS = '0 4px 14px rgba(232,89,12,0.25)' // shadow
 function TopicsBlock({ block, onChange }) {
   const c = block.content || { intro: '', topics: [] }
   const [newTopic, setNewTopic] = useState('')
+  const [editingIdx, setEditingIdx] = useState(null)
+  const [editVal, setEditVal] = useState('')
   const addTopic = () => {
     if (!newTopic.trim()) return
     onChange({ ...c, topics: [...(c.topics || []), newTopic.trim()] })
     setNewTopic('')
+  }
+  const startEdit = (i) => { setEditingIdx(i); setEditVal(c.topics[i]) }
+  const commitEdit = (i) => {
+    if (editVal.trim()) { const topics = [...c.topics]; topics[i] = editVal.trim(); onChange({ ...c, topics }) }
+    setEditingIdx(null)
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -314,7 +400,11 @@ function TopicsBlock({ block, onChange }) {
           {(c.topics || []).map((t, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: '#fff8f5', borderRadius: 8, border: `1px solid ${OGL}` }}>
               <div style={{ width: 22, height: 22, borderRadius: '50%', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: OGS }}>{i + 1}</div>
-              <span style={{ flex: 1, fontSize: 13, color: '#1A1A1A' }}>{t}</span>
+              {editingIdx === i
+                ? <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)} onBlur={() => commitEdit(i)} onKeyDown={e => { if (e.key === 'Enter') commitEdit(i); if (e.key === 'Escape') setEditingIdx(null) }} style={{ flex: 1, fontSize: 13, border: '1.5px solid #E8590C', borderRadius: 6, padding: '3px 8px', outline: 'none', fontFamily: 'system-ui' }} />
+                : <span style={{ flex: 1, fontSize: 13, color: '#1A1A1A' }}>{t}</span>
+              }
+              <button onClick={() => startEdit(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8590C', padding: 2 }}><HiOutlinePencil size={12} /></button>
               <button onClick={() => onChange({ ...c, topics: c.topics.filter((_, idx) => idx !== i) })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}><HiOutlineX size={12} /></button>
             </div>
           ))}
@@ -492,6 +582,13 @@ function CodeBlock({ block, onChange }) {
 function StepsBlock({ block, onChange }) {
   const c = block.content || { title: '', steps: [] }
   const [newStep, setNewStep] = useState({ heading: '', body: '' })
+  const [editingId, setEditingId] = useState(null)
+  const [editVal, setEditVal] = useState({ heading: '', body: '' })
+  const startEdit = (step) => { setEditingId(step.id); setEditVal({ heading: step.heading, body: step.body || '' }) }
+  const commitEdit = () => {
+    if (editVal.heading.trim()) onChange({ ...c, steps: c.steps.map(s => s.id === editingId ? { ...s, ...editVal } : s) })
+    setEditingId(null)
+  }
   const addStep = () => {
     if (!newStep.heading.trim()) return
     onChange({ ...c, steps: [...(c.steps || []), { ...newStep, id: Date.now() }] })
@@ -517,11 +614,18 @@ function StepsBlock({ block, onChange }) {
           <div key={step.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 12px', background: OGB, borderRadius: 9, border: `1px solid ${OGL}` }}>
             <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: OGS }}>{i + 1}</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>{step.heading}</div>
-              {step.body && <div style={{ fontSize: 12, color: '#6b6375', marginTop: 2 }}>{step.body}</div>}
+              {editingId === step.id
+                ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <input autoFocus value={editVal.heading} onChange={e => setEditVal(v => ({ ...v, heading: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditingId(null) }} style={{ fontSize: 13, fontWeight: 700, border: '1.5px solid #E8590C', borderRadius: 6, padding: '3px 8px', outline: 'none', fontFamily: 'system-ui' }} />
+                    <input value={editVal.body} onChange={e => setEditVal(v => ({ ...v, body: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditingId(null) }} placeholder="Description (optional)" style={{ fontSize: 12, border: '1.5px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', outline: 'none', fontFamily: 'system-ui', color: '#6b6375' }} />
+                    <button onClick={commitEdit} style={{ alignSelf: 'flex-start', padding: '2px 10px', borderRadius: 5, border: 'none', background: '#E8590C', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                  </div>
+                : <><div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>{step.heading}</div>{step.body && <div style={{ fontSize: 12, color: '#6b6375', marginTop: 2 }}>{step.body}</div>}</>
+              }
             </div>
             <button onClick={() => moveStep(i, -1)} disabled={i === 0} style={{ background: 'none', border: 'none', cursor: i === 0 ? 'not-allowed' : 'pointer', color: i === 0 ? '#d1d5db' : '#9ca3af', padding: 2 }}><HiOutlineChevronUp size={13} /></button>
             <button onClick={() => moveStep(i, 1)} disabled={i === c.steps.length - 1} style={{ background: 'none', border: 'none', cursor: i === c.steps.length - 1 ? 'not-allowed' : 'pointer', color: i === c.steps.length - 1 ? '#d1d5db' : '#9ca3af', padding: 2 }}><HiOutlineChevronDown size={13} /></button>
+            <button onClick={() => startEdit(step)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8590C', padding: 2 }}><HiOutlinePencil size={13} /></button>
             <button onClick={() => removeStep(step.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}><HiOutlineTrash size={13} /></button>
           </div>
         ))}
@@ -561,6 +665,13 @@ function StepsBlock({ block, onChange }) {
 function ConceptsBlock({ block, onChange }) {
   const c = block.content || { title: '', concepts: [] }
   const [newConcept, setNewConcept] = useState({ term: '', definition: '' })
+  const [editingId, setEditingId] = useState(null)
+  const [editVal, setEditVal] = useState({ term: '', definition: '' })
+  const startEdit = (con) => { setEditingId(con.id); setEditVal({ term: con.term, definition: con.definition }) }
+  const commitEdit = () => {
+    if (editVal.term.trim()) onChange({ ...c, concepts: c.concepts.map(con => con.id === editingId ? { ...con, ...editVal } : con) })
+    setEditingId(null)
+  }
   const addConcept = () => {
     if (!newConcept.term.trim() || !newConcept.definition.trim()) return
     onChange({ ...c, concepts: [...(c.concepts || []), { ...newConcept, id: Date.now() }] })
@@ -580,9 +691,16 @@ function ConceptsBlock({ block, onChange }) {
           {c.concepts.map(con => (
             <div key={con.id} style={{ display: 'flex', gap: 10, padding: '10px 14px', background: OGB, borderRadius: 9, border: `1px solid ${OGL}`, borderLeft: `3px solid ${OG}`, alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: OG3 }}>{con.term}</div>
-                <div style={{ fontSize: 12, color: '#6b6375', marginTop: 3, lineHeight: 1.5 }}>{con.definition}</div>
+                {editingId === con.id
+                  ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <input autoFocus value={editVal.term} onChange={e => setEditVal(v => ({ ...v, term: e.target.value }))} onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }} style={{ fontSize: 13, fontWeight: 700, border: '1.5px solid #E8590C', borderRadius: 6, padding: '3px 8px', outline: 'none', fontFamily: 'system-ui' }} />
+                      <textarea value={editVal.definition} onChange={e => setEditVal(v => ({ ...v, definition: e.target.value }))} rows={2} style={{ fontSize: 12, border: '1.5px solid #e5e7eb', borderRadius: 6, padding: '4px 8px', outline: 'none', fontFamily: 'system-ui', color: '#6b6375', resize: 'vertical' }} />
+                      <button onClick={commitEdit} style={{ alignSelf: 'flex-start', padding: '2px 10px', borderRadius: 5, border: 'none', background: '#E8590C', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                    </div>
+                  : <><div style={{ fontSize: 13, fontWeight: 700, color: OG3 }}>{con.term}</div><div style={{ fontSize: 12, color: '#6b6375', marginTop: 3, lineHeight: 1.5 }}>{con.definition}</div></>
+                }
               </div>
+              <button onClick={() => startEdit(con)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8590C', padding: 2, flexShrink: 0 }}><HiOutlinePencil size={13} /></button>
               <button onClick={() => removeConcept(con.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2, flexShrink: 0 }}><HiOutlineTrash size={13} /></button>
             </div>
           ))}
@@ -620,6 +738,13 @@ function ConceptsBlock({ block, onChange }) {
 function TimelineBlock({ block, onChange }) {
   const c = block.content || { title: '', items: [] }
   const [newItem, setNewItem] = useState({ label: '', description: '', tag: '' })
+  const [editingId, setEditingId] = useState(null)
+  const [editVal, setEditVal] = useState({ label: '', description: '', tag: '' })
+  const startEdit = (item) => { setEditingId(item.id); setEditVal({ label: item.label, description: item.description || '', tag: item.tag || '' }) }
+  const commitEdit = () => {
+    if (editVal.label.trim()) onChange({ ...c, items: c.items.map(item => item.id === editingId ? { ...item, ...editVal } : item) })
+    setEditingId(null)
+  }
   const addItem = () => {
     if (!newItem.label.trim()) return
     onChange({ ...c, items: [...(c.items || []), { ...newItem, id: Date.now() }] })
@@ -647,12 +772,21 @@ function TimelineBlock({ block, onChange }) {
           <div key={item.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 12px', background: OGB, borderRadius: 9, border: `1px solid ${OGL}` }}>
             <div style={{ width: 28, height: 28, borderRadius: '50%', background: stepColors[i % stepColors.length], color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: OGS }}>{i + 1}</div>
             <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>{item.label}</span>
-              {item.tag && <span style={{ fontSize: 11, marginLeft: 8, color: OG, fontWeight: 600, background: OGB, padding: '1px 7px', borderRadius: 100, border: `1px solid ${OGL}` }}>{item.tag}</span>}
-              {item.description && <div style={{ fontSize: 12, color: '#6b6375', marginTop: 2 }}>{item.description}</div>}
+              {editingId === item.id
+                ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <input autoFocus value={editVal.label} onChange={e => setEditVal(v => ({ ...v, label: e.target.value }))} onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }} style={{ fontSize: 13, fontWeight: 700, border: '1.5px solid #E8590C', borderRadius: 6, padding: '3px 8px', outline: 'none', fontFamily: 'system-ui' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 6 }}>
+                      <input value={editVal.description} onChange={e => setEditVal(v => ({ ...v, description: e.target.value }))} placeholder="Description" style={{ fontSize: 12, border: '1.5px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', outline: 'none', fontFamily: 'system-ui', color: '#6b6375' }} />
+                      <input value={editVal.tag} onChange={e => setEditVal(v => ({ ...v, tag: e.target.value }))} placeholder="Tag" style={{ fontSize: 12, border: '1.5px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', outline: 'none', fontFamily: 'system-ui', color: '#6b6375' }} />
+                    </div>
+                    <button onClick={commitEdit} style={{ alignSelf: 'flex-start', padding: '2px 10px', borderRadius: 5, border: 'none', background: '#E8590C', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                  </div>
+                : <><span style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>{item.label}</span>{item.tag && <span style={{ fontSize: 11, marginLeft: 8, color: OG, fontWeight: 600, background: OGB, padding: '1px 7px', borderRadius: 100, border: `1px solid ${OGL}` }}>{item.tag}</span>}{item.description && <div style={{ fontSize: 12, color: '#6b6375', marginTop: 2 }}>{item.description}</div>}</>
+              }
             </div>
             <button onClick={() => moveItem(i, -1)} disabled={i === 0} style={{ background: 'none', border: 'none', cursor: i === 0 ? 'not-allowed' : 'pointer', color: i === 0 ? '#d1d5db' : '#9ca3af', padding: 2 }}><HiOutlineChevronUp size={13} /></button>
             <button onClick={() => moveItem(i, 1)} disabled={i === c.items.length - 1} style={{ background: 'none', border: 'none', cursor: i === c.items.length - 1 ? 'not-allowed' : 'pointer', color: i === c.items.length - 1 ? '#d1d5db' : '#9ca3af', padding: 2 }}><HiOutlineChevronDown size={13} /></button>
+            <button onClick={() => startEdit(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8590C', padding: 2 }}><HiOutlinePencil size={13} /></button>
             <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}><HiOutlineTrash size={13} /></button>
           </div>
         ))}
@@ -702,6 +836,13 @@ function TimelineBlock({ block, onChange }) {
 function SummaryBlock({ block, onChange }) {
   const c = block.content || { title: 'Key Points to Remember', points: [] }
   const [newPoint, setNewPoint] = useState('')
+  const [editingIdx, setEditingIdx] = useState(null)
+  const [editVal, setEditVal] = useState('')
+  const startEdit = (i) => { setEditingIdx(i); setEditVal(c.points[i]) }
+  const commitEdit = (i) => {
+    if (editVal.trim()) { const points = [...c.points]; points[i] = editVal.trim(); onChange({ ...c, points }) }
+    setEditingIdx(null)
+  }
   const addPoint = () => {
     if (!newPoint.trim()) return
     onChange({ ...c, points: [...(c.points || []), newPoint.trim()] })
@@ -730,9 +871,13 @@ function SummaryBlock({ block, onChange }) {
         {(c.points || []).map((pt, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '9px 12px', background: OGB, borderRadius: 8, border: `1px solid ${OGL}` }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
-            <span style={{ flex: 1, fontSize: 13, color: '#1A1A1A' }}>{pt}</span>
+            {editingIdx === i
+              ? <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)} onBlur={() => commitEdit(i)} onKeyDown={e => { if (e.key === 'Enter') commitEdit(i); if (e.key === 'Escape') setEditingIdx(null) }} style={{ flex: 1, fontSize: 13, border: '1.5px solid #E8590C', borderRadius: 6, padding: '3px 8px', outline: 'none', fontFamily: 'system-ui' }} />
+              : <span style={{ flex: 1, fontSize: 13, color: '#1A1A1A' }}>{pt}</span>
+            }
             <button onClick={() => movePoint(i, -1)} disabled={i === 0} style={{ background: 'none', border: 'none', cursor: i === 0 ? 'not-allowed' : 'pointer', color: i === 0 ? '#d1d5db' : '#9ca3af', padding: 2 }}><HiOutlineChevronUp size={13} /></button>
             <button onClick={() => movePoint(i, 1)} disabled={i === c.points.length - 1} style={{ background: 'none', border: 'none', cursor: i === c.points.length - 1 ? 'not-allowed' : 'pointer', color: i === c.points.length - 1 ? '#d1d5db' : '#9ca3af', padding: 2 }}><HiOutlineChevronDown size={13} /></button>
+            <button onClick={() => startEdit(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8590C', padding: 2 }}><HiOutlinePencil size={13} /></button>
             <button onClick={() => removePoint(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}><HiOutlineX size={13} /></button>
           </div>
         ))}
@@ -867,7 +1012,7 @@ function ComparisonBlock({ block, onChange }) {
               </tr>
             ))}
             {/* Draft new row */}
-            <tr style={{ background: OGB }}>
+            <tr style={{ background: c.rows.length % 2 === 0 ? '#fff' : OGB }}>
               {syncedDraft.map((val, ci) => (
                 <td key={ci} style={{ padding: '8px 14px', borderTop: `1px dashed ${OGL}` }}>
                   <input
@@ -1206,7 +1351,7 @@ function StructureTab({ courseId, onEditLesson }) {
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 function OverviewTab({ course, onUpdate }) {
-  const [form, setForm] = useState({ ...course, goals: Array.isArray(course.goals) ? course.goals : [] })
+  const [form, setForm] = useState({ ...course, goals: Array.isArray(course?.goals) ? course.goals : [] })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [newGoal, setNewGoal] = useState('')
@@ -1264,6 +1409,16 @@ function OverviewTab({ course, onUpdate }) {
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
               <input type="checkbox" checked={form.is_published || false} onChange={e => update('is_published', e.target.checked)} /> Published
             </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+              <input type="checkbox"
+                checked={form.has_certificate !== false}
+                onChange={e => update('has_certificate', e.target.checked)}
+                style={{ accentColor: '#E8590C' }}
+              />
+              <span style={{ color: form.has_certificate !== false ? '#E8590C' : '#6b6375', fontWeight: form.has_certificate !== false ? 600 : 400, transition: 'all 0.2s' }}>
+                Issue Certificate on Completion
+              </span>
+            </label>
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -1286,6 +1441,7 @@ export default function CourseBuilder() {
   const [editingLesson, setEditingLesson] = useState(null)
 
   useEffect(() => {
+    if (!courseId) return
     supabase.from('courses').select('*').eq('id', courseId).single().then(({ data }) => {
       setCourse(data)
       setLoading(false)
@@ -1347,7 +1503,7 @@ export default function CourseBuilder() {
           <LessonEditor lesson={editingLesson} courseId={courseId} onBack={() => setEditingLesson(null)} />
         ) : (
           <>
-            {activeTab === 'overview'  && <OverviewTab course={course} onUpdate={setCourse} />}
+            {activeTab === 'overview'  && course && <OverviewTab course={course} onUpdate={setCourse} />}
             {activeTab === 'structure' && <StructureTab courseId={courseId} onEditLesson={setEditingLesson} />}
           </>
         )}

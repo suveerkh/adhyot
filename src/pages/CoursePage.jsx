@@ -688,7 +688,7 @@ export default function CoursePage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f4f5f7', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', background: '#f4f5f7', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <style>{`
         @keyframes spin     { to { transform: rotate(360deg); } }
         @keyframes fadeUp   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
@@ -849,19 +849,36 @@ export default function CoursePage() {
                 <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af', fontSize: 14 }}>No content for this lesson yet.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  {blocks.map((block, i) => (
-                    <div key={block.id} style={{ animation: `fadeUp 0.45s ease ${i * 0.06}s both` }}>
-                      {block.title && <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>{block.title}</div>}
-                      <RenderBlock block={block} onQuizComplete={handleQuizComplete} />
-                      {i < blocks.length - 1 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '28px 0' }}>
-                          <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, #DDDDDD)' }} />
-                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#DDDDDD', flexShrink: 0 }} />
-                          <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, #DDDDDD, transparent)' }} />
+                  {(() => {
+                    const lessonHasQuiz = blocks.some(b => b.type === 'quiz' || b.type === 'assessment')
+                    const quizDone = isAdmin || !!quizPassed[activeLesson?.id]
+                    return blocks.map((block, i) => {
+                      const locked = block.type === 'summary' && lessonHasQuiz && !quizDone
+                      return (
+                        <div key={block.id} style={{ animation: `fadeUp 0.45s ease ${i * 0.06}s both` }}>
+                          {block.title && <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>{block.title}</div>}
+                          {locked ? (
+                            <div style={{ background: '#f9fafb', border: '1.5px dashed #DDDDDD', borderRadius: 14, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
+                              <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <HiOutlineLockClosed size={22} style={{ color: '#9ca3af' }} />
+                              </div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: '#6b7280' }}>Key Points locked</div>
+                              <div style={{ fontSize: 13, color: '#9ca3af' }}>Complete the quiz above to unlock the key takeaways.</div>
+                            </div>
+                          ) : (
+                            <RenderBlock block={block} onQuizComplete={handleQuizComplete} />
+                          )}
+                          {i < blocks.length - 1 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '28px 0' }}>
+                              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, #DDDDDD)' }} />
+                              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#DDDDDD', flexShrink: 0 }} />
+                              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, #DDDDDD, transparent)' }} />
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      )
+                    })
+                  })()}
                 </div>
               )}
 
