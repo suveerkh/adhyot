@@ -5,7 +5,7 @@ import {
   HiOutlinePencil, HiOutlineX, HiOutlineCheck,
   HiOutlineVideoCamera, HiOutlineDocument, HiOutlineClipboardList,
   HiOutlineAcademicCap, HiOutlineChevronUp, HiOutlineChevronDown,
-  HiOutlineSave, HiOutlineLink, HiOutlineDuplicate,
+  HiOutlineLink, HiOutlineDuplicate,
   HiOutlineBookOpen, HiOutlineCollection, HiOutlineLightBulb,
   HiOutlineTable, HiOutlineViewList, HiOutlineCode,
   HiOutlineKey, HiOutlineChartBar, HiOutlineStar, HiOutlineEye,
@@ -1038,29 +1038,34 @@ function ComparisonBlock({ block, onChange }) {
 // ─── Single Block ─────────────────────────────────────────────────────────────
 function Block({ block, index, total, onUpdate, onDelete, onMove, onDuplicate }) {
   const [expanded, setExpanded] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saveState, setSaveState] = useState('idle') // idle | saving | saved
+  const debounceRef = useRef(null)
   const info = blockInfo(block.type)
 
-  const handleSave = async () => {
-    setSaving(true)
-    const isTempId = String(block.id).startsWith('temp_')
+  const autosave = async (updated) => {
+    setSaveState('saving')
+    const isTempId = String(updated.id).startsWith('temp_')
     if (isTempId) {
-      // Block wasn't persisted yet — insert it now
       const { data } = await supabase.from('content_blocks').insert([{
-        course_id: block.course_id, lesson_id: block.lesson_id,
-        type: block.type, title: block.title, content: block.content, order_index: block.order_index,
+        course_id: updated.course_id, lesson_id: updated.lesson_id,
+        type: updated.type, title: updated.title, content: updated.content, order_index: updated.order_index,
       }]).select().single()
-      if (data) onUpdate({ ...block, id: data.id })
+      if (data) onUpdate({ ...updated, id: data.id })
     } else {
-      await supabase.from('content_blocks').update({ title: block.title, content: block.content }).eq('id', block.id)
+      await supabase.from('content_blocks').update({ title: updated.title, content: updated.content }).eq('id', updated.id)
     }
-    setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setSaveState('saved')
+    setTimeout(() => setSaveState('idle'), 2000)
+  }
+
+  const handleChange = (updated) => {
+    onUpdate(updated)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => autosave(updated), 1500)
   }
 
   const renderBlock = () => {
-    const props = { block, onChange: c => onUpdate({ ...block, content: c }) }
+    const props = { block, onChange: c => handleChange({ ...block, content: c }) }
     switch (block.type) {
       case 'video':      return <VideoBlock {...props} />
       case 'text':       return <TextBlock {...props} />
@@ -1089,7 +1094,7 @@ function Block({ block, index, total, onUpdate, onDelete, onMove, onDuplicate })
         <div style={{ flex: 1, minWidth: 0 }}>
           <input
             value={block.title || ''}
-            onChange={e => { e.stopPropagation(); onUpdate({ ...block, title: e.target.value }) }}
+            onChange={e => { e.stopPropagation(); handleChange({ ...block, title: e.target.value }) }}
             onClick={e => e.stopPropagation()}
             placeholder={`Untitled ${info.label}`}
             style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, fontWeight: 700, color: '#08060d', width: '100%', cursor: 'text', fontFamily: 'system-ui' }}
@@ -1097,12 +1102,14 @@ function Block({ block, index, total, onUpdate, onDelete, onMove, onDuplicate })
           <div style={{ fontSize: 10, color: '#E8590C', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 1 }}>{info.label}</div>
         </div>
         <div style={{ display: 'flex', gap: 3, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+          {saveState !== 'idle' && (
+            <span style={{ fontSize: 11, fontWeight: 600, color: saveState === 'saved' ? '#16a34a' : '#9ca3af', marginRight: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+              {saveState === 'saving' ? 'Saving…' : <><HiOutlineCheck size={10} /> Saved</>}
+            </span>
+          )}
           <button onClick={() => onMove(index, -1)} disabled={index === 0} style={{ padding: 4, background: 'none', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer', color: index === 0 ? '#d1d5db' : '#9ca3af', borderRadius: 4 }}><HiOutlineChevronUp size={13} /></button>
           <button onClick={() => onMove(index, 1)} disabled={index === total - 1} style={{ padding: 4, background: 'none', border: 'none', cursor: index === total - 1 ? 'not-allowed' : 'pointer', color: index === total - 1 ? '#d1d5db' : '#9ca3af', borderRadius: 4 }}><HiOutlineChevronDown size={13} /></button>
           <button onClick={() => onDuplicate(index)} title="Duplicate" style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', borderRadius: 4 }}><HiOutlineDuplicate size={13} /></button>
-          <button onClick={handleSave} disabled={saving} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: saved ? '#16a34a' : saving ? '#f5a882' : 'linear-gradient(135deg, #E8590C, #ff7c35)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4, boxShadow: saved || saving ? 'none' : '0 2px 8px rgba(232,89,12,0.3)' }}>
-            {saved ? <><HiOutlineCheck size={10} /> Saved</> : saving ? 'Saving…' : <><HiOutlineSave size={10} /> Save</>}
-          </button>
           <button onClick={() => onDelete(block.id)} title="Delete" style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', borderRadius: 4 }}><HiOutlineTrash size={13} /></button>
           <span style={{ color: '#9ca3af', fontSize: 10, marginLeft: 2 }}>{expanded ? '▲' : '▼'}</span>
         </div>
@@ -1350,12 +1357,13 @@ function StructureTab({ courseId, onEditLesson }) {
 }
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
-function OverviewTab({ course, onUpdate }) {
+function OverviewTab({ course, onUpdate, onDirtyChange, onFormChange }) {
   const [form, setForm] = useState({ ...course, goals: Array.isArray(course?.goals) ? course.goals : [] })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [dirty, setDirty] = useState(false)
   const [newGoal, setNewGoal] = useState('')
-  const update = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const update = (k, v) => { setForm(f => { const next = { ...f, [k]: v }; if (onFormChange) onFormChange(next); return next }); if (!dirty) { setDirty(true); onDirtyChange?.(true) } }
   const addGoal = () => { if (!newGoal.trim()) return; update('goals', [...form.goals, newGoal.trim()]); setNewGoal('') }
   const removeGoal = (i) => update('goals', form.goals.filter((_, idx) => idx !== i))
   const handleSave = async () => {
@@ -1363,6 +1371,7 @@ function OverviewTab({ course, onUpdate }) {
     await supabase.from('courses').update(form).eq('id', course.id)
     onUpdate(form)
     setSaving(false); setSaved(true)
+    setDirty(false); onDirtyChange?.(false)
     setTimeout(() => setSaved(false), 2000)
   }
   return (
@@ -1439,6 +1448,13 @@ export default function CourseBuilder() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [editingLesson, setEditingLesson] = useState(null)
+  const [overviewDirty, setOverviewDirty] = useState(false)
+  const [unsavedModal, setUnsavedModal] = useState(null)
+  const pendingFormRef = useRef(null)
+
+  const guardedAction = (action) => {
+    if (overviewDirty) { setUnsavedModal({ action }) } else { action() }
+  }
 
   useEffect(() => {
     if (!courseId) return
@@ -1464,7 +1480,7 @@ export default function CourseBuilder() {
 
       {/* Top Bar */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 32px', display: 'flex', alignItems: 'center', height: 60, position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <button onClick={() => navigate('/admin')} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 13, fontWeight: 500, marginRight: 20, padding: '6px 10px', borderRadius: 7 }}
+        <button onClick={() => guardedAction(() => navigate('/admin'))} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 13, fontWeight: 500, marginRight: 20, padding: '6px 10px', borderRadius: 7 }}
           onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
           onMouseLeave={e => e.currentTarget.style.background = 'none'}
         ><HiOutlineArrowLeft size={16} /> Dashboard</button>
@@ -1492,7 +1508,7 @@ export default function CourseBuilder() {
       {!editingLesson && (
         <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 32px', display: 'flex', gap: 4 }}>
           {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: activeTab === tab.id ? 700 : 500, color: activeTab === tab.id ? '#E8590C' : '#6b7280', borderBottom: activeTab === tab.id ? '2px solid #E8590C' : '2px solid transparent', transition: 'all 0.2s' }}>{tab.label}</button>
+            <button key={tab.id} onClick={() => guardedAction(() => setActiveTab(tab.id))} style={{ padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: activeTab === tab.id ? 700 : 500, color: activeTab === tab.id ? '#E8590C' : '#6b7280', borderBottom: activeTab === tab.id ? '2px solid #E8590C' : '2px solid transparent', transition: 'all 0.2s' }}>{tab.label}</button>
           ))}
         </div>
       )}
@@ -1500,14 +1516,46 @@ export default function CourseBuilder() {
       {/* Content */}
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
         {editingLesson ? (
-          <LessonEditor lesson={editingLesson} courseId={courseId} onBack={() => setEditingLesson(null)} />
+          <LessonEditor lesson={editingLesson} courseId={courseId} onBack={() => guardedAction(() => setEditingLesson(null))} />
         ) : (
           <>
-            {activeTab === 'overview'  && course && <OverviewTab course={course} onUpdate={setCourse} />}
+            {activeTab === 'overview'  && course && <OverviewTab course={course} onUpdate={setCourse} onDirtyChange={setOverviewDirty} onFormChange={f => { pendingFormRef.current = f }} />}
             {activeTab === 'structure' && <StructureTab courseId={courseId} onEditLesson={setEditingLesson} />}
           </>
         )}
       </div>
+
+      {/* Unsaved changes modal */}
+      {unsavedModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(8,6,13,0.6)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: '36px 32px', maxWidth: 420, width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: '#FFF3EC', border: '1.5px solid #fcd9c0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <HiOutlineExclamation size={26} style={{ color: '#E8590C' }} />
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", textAlign: 'center', marginBottom: 10 }}>Unsaved Changes</h3>
+            <p style={{ fontSize: 14, color: '#6b6375', textAlign: 'center', lineHeight: 1.6, marginBottom: 28 }}>
+              You have unsaved changes in the Overview tab. Save before leaving?
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setUnsavedModal(null)} style={{ flex: 1, padding: '11px', borderRadius: 9, border: '1.5px solid #DDDDDD', background: '#fff', color: '#6b6375', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={() => { setOverviewDirty(false); setUnsavedModal(null); unsavedModal.action() }} style={{ flex: 1, padding: '11px', borderRadius: 9, border: '1.5px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Don't Save
+              </button>
+              <button onClick={async () => {
+                if (pendingFormRef.current) {
+                  await supabase.from('courses').update(pendingFormRef.current).eq('id', courseId)
+                  setCourse(pendingFormRef.current)
+                }
+                setOverviewDirty(false); setUnsavedModal(null); unsavedModal.action()
+              }} style={{ flex: 2, padding: '11px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg, #E8590C, #ff7c35)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(232,89,12,0.3)' }}>
+                Save & Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import {
   HiOutlineSearch, HiOutlineBookOpen, HiOutlineClock,
   HiOutlineAcademicCap, HiOutlineChevronDown, HiOutlineX,
   HiOutlineLogout, HiOutlineViewGrid, HiOutlineFilter,
+  HiOutlineMenuAlt3,
 } from 'react-icons/hi'
 import supabase from '../supabaseClient'
 
@@ -17,6 +18,7 @@ const OGL = '#fcd9c0'
 function Navbar({ user, profile, onLogout }) {
   const [scrolled, setScrolled] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -29,6 +31,7 @@ function Navbar({ user, profile, onLogout }) {
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   return (
+    <>
     <nav style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
       background: scrolled ? 'rgba(255,255,255,0.97)' : '#fff',
@@ -41,7 +44,7 @@ function Navbar({ user, profile, onLogout }) {
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #E8590C, #ff8c42)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Georgia', serif", fontWeight: 700, color: '#fff', fontSize: 18 }}>A</div>
           <span style={{ fontFamily: "'Georgia', serif", fontWeight: 700, fontSize: 22, color: '#08060d', letterSpacing: '-0.5px' }}>Adhyot</span>
         </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+        <div className="cc-desktop" style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
           <a href="/courses" style={{ color: OG, fontSize: 15, textDecoration: 'none', fontWeight: 700 }}>Courses</a>
           {user ? (
             <div style={{ position: 'relative' }}>
@@ -66,13 +69,53 @@ function Navbar({ user, profile, onLogout }) {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => navigate('/auth')} style={{ padding: '9px 20px', borderRadius: 9, border: '1.5px solid #DDDDDD', background: '#fff', color: '#1A1A1A', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Log In</button>
+              <button onClick={() => navigate('/auth', { state: { mode: 'login' } })} style={{ padding: '9px 20px', borderRadius: 9, border: '1.5px solid #DDDDDD', background: '#fff', color: '#1A1A1A', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Log In</button>
               <button onClick={() => navigate('/auth?mode=register')} style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,89,12,0.3)' }}>Get Started</button>
             </div>
           )}
         </div>
-      </div>
-    </nav>
+      {/* Hamburger */}
+          <button className="cc-mobile" onClick={() => setMobileOpen(true)} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', color: '#08060d', padding: 4, alignItems: 'center' }}>
+            <HiOutlineMenuAlt3 size={26} />
+          </button>
+        </div>
+      </nav>
+
+      {mobileOpen && (
+        <>
+          <div onClick={() => setMobileOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(8,6,13,0.5)', zIndex: 299 }} />
+          <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 280, background: '#fff', zIndex: 300, boxShadow: '-8px 0 40px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column', padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+              <span style={{ fontFamily: "'Georgia', serif", fontWeight: 700, fontSize: 20, color: '#08060d' }}>Adhyot</span>
+              <button onClick={() => setMobileOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b6375' }}><HiOutlineX size={22} /></button>
+            </div>
+            {user && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 16, borderBottom: '1px solid #DDDDDD', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #E8590C, #ff7c35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff' }}>{initials}</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#08060d' }}>{name}</div>
+                  <div style={{ fontSize: 12, color: '#6b6375' }}>{user.email}</div>
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+              <a href="/courses" onClick={() => setMobileOpen(false)} style={{ padding: '13px 0', fontSize: 16, fontWeight: 600, color: '#E8590C', textDecoration: 'none', borderBottom: '1px solid #f3f4f6' }}>Courses</a>
+              {user && <button onClick={() => { navigate('/dashboard'); setMobileOpen(false) }} style={{ padding: '13px 0', fontSize: 16, fontWeight: 600, color: '#1A1A1A', background: 'none', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', textAlign: 'left' }}>Dashboard</button>}
+            </div>
+            <div style={{ paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {user ? (
+                <button onClick={() => { onLogout(); setMobileOpen(false) }} style={{ padding: '13px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Log Out</button>
+              ) : (
+                <>
+                  <button onClick={() => { navigate('/auth?mode=register'); setMobileOpen(false) }} style={{ padding: '13px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #E8590C, #ff7c35)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Get Started</button>
+                  <button onClick={() => { navigate('/auth', { state: { mode: 'login' } }); setMobileOpen(false) }} style={{ padding: '13px', borderRadius: 10, border: '1.5px solid #DDDDDD', background: '#fff', color: '#1A1A1A', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>Log In</button>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -90,13 +133,18 @@ function CourseCard({ course, enrolled, onEnroll, user }) {
   const handleClick = () => {
     if (isEnrolled) {
       navigate(`/learn/${course.id}`)
-    } else if (course.is_free) {
-      if (!user) { navigate('/auth'); return }
-      onEnroll(course)
     } else {
       navigate(`/courses/${course.id}`)
     }
   }
+
+  const handleEnrollBtn = (e) => {
+    e.stopPropagation()
+    if (!user) { navigate('/auth', { state: { mode: 'login' } }); return }
+    onEnroll(course)
+  }
+
+
 
   return (
     <div
@@ -162,7 +210,7 @@ function CourseCard({ course, enrolled, onEnroll, user }) {
             }
           </div>
           <button
-            onClick={e => { e.stopPropagation(); handleClick() }}
+            onClick={e => { e.stopPropagation(); if (isEnrolled) navigate(`/learn/${course.id}`); else if (course.is_free) handleEnrollBtn(e); else navigate(`/courses/${course.id}`); }}
             style={{
               padding: '9px 20px', borderRadius: 9, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
               background: isCompleted ? '#dcfce7' : isEnrolled ? `linear-gradient(135deg, ${OG}, ${OG2})` : `linear-gradient(135deg, ${OG}, ${OG2})`,
@@ -272,7 +320,7 @@ export default function CourseCatalogue() {
   }
 
   const handleEnroll = async (course) => {
-    if (!user) { navigate('/auth'); return }
+    if (!user) { navigate('/auth', { state: { mode: 'login' } }); return }
     if (course.is_free) {
       setEnrolling(true)
       // upsert so duplicate enrollments don't block navigation
@@ -314,9 +362,18 @@ export default function CourseCatalogue() {
   return (
     <div style={{ minHeight: '100vh', background: '#f4f5f7', fontFamily: 'system-ui, sans-serif' }}>
       <style>{`
-        @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-        * { box-sizing: border-box; }
+        @keyframes popIn  { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        * { box-sizing:border-box; }
+        .cc-mobile  { display:none !important; }
+        .cc-desktop { display:flex !important; }
+        @media (max-width:768px) {
+          .cc-mobile  { display:flex !important; }
+          .cc-desktop { display:none !important; }
+          .cc-hero-title { font-size:28px !important; }
+          .cc-filter-bar { flex-direction:column !important; align-items:stretch !important; }
+          .cc-filter-bar select { width:100% !important; }
+        }
       `}</style>
 
       <Navbar user={user} profile={profile} onLogout={handleLogout} />
@@ -325,9 +382,7 @@ export default function CourseCatalogue() {
       <div style={{ background: `linear-gradient(135deg, #08060d 0%, #1a0e06 100%)`, paddingTop: 110, paddingBottom: 56, paddingLeft: '5%', paddingRight: '5%' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: OG, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12 }}>All Courses</div>
-          <h1 style={{ fontSize: 40, fontWeight: 800, color: '#fff', fontFamily: "'Georgia', serif", margin: '0 0 12px', lineHeight: 1.2 }}>
-            Learn QA & Cybersecurity
-          </h1>
+          <h1 className="cc-hero-title" style={{ fontSize: 40, fontWeight: 800, color: '#fff', fontFamily: "'Georgia', serif", margin: '0 0 12px', lineHeight: 1.2 }}>Learn QA &amp; Cybersecurity</h1>
           <p style={{ fontSize: 16, color: '#9ca3af', maxWidth: 520, lineHeight: 1.7, margin: 0 }}>
             Structured courses built for real-world careers in software testing and security.
           </p>
@@ -354,7 +409,7 @@ export default function CourseCatalogue() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 5% 80px' }}>
 
         {/* Filter bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
+        <div className="cc-filter-bar" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
           <HiOutlineFilter size={15} style={{ color: '#6b6375', flexShrink: 0 }} />
 
           {/* Domain */}

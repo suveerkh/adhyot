@@ -6,7 +6,7 @@ import {
   HiOutlineChevronUp, HiOutlineLockClosed, HiOutlinePlay,
   HiOutlineDocument, HiOutlineClipboardList, HiOutlineLogout,
   HiOutlineViewGrid, HiOutlineChevronRight, HiOutlineUsers,
-  HiOutlineStar, HiOutlineBadgeCheck,
+  HiOutlineStar, HiOutlineBadgeCheck, HiOutlineMenuAlt3, HiOutlineX,
 } from 'react-icons/hi'
 import supabase from '../supabaseClient'
 
@@ -20,6 +20,7 @@ const OGL = '#fcd9c0'
 function Navbar({ user, profile, onLogout }) {
   const [scrolled, setScrolled] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -32,6 +33,7 @@ function Navbar({ user, profile, onLogout }) {
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   return (
+    <>
     <nav style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
       background: scrolled ? 'rgba(255,255,255,0.97)' : '#fff',
@@ -44,7 +46,7 @@ function Navbar({ user, profile, onLogout }) {
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #E8590C, #ff8c42)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Georgia', serif", fontWeight: 700, color: '#fff', fontSize: 18 }}>A</div>
           <span style={{ fontFamily: "'Georgia', serif", fontWeight: 700, fontSize: 22, color: '#08060d', letterSpacing: '-0.5px' }}>Adhyot</span>
         </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+        <div className="cd-desktop" style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
           <a href="/courses" style={{ color: '#6b6375', fontSize: 15, textDecoration: 'none', fontWeight: 500, transition: 'color 0.2s' }}
             onMouseEnter={e => e.target.style.color = OG}
             onMouseLeave={e => e.target.style.color = '#6b6375'}
@@ -72,13 +74,48 @@ function Navbar({ user, profile, onLogout }) {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => navigate('/auth')} style={{ padding: '9px 20px', borderRadius: 9, border: '1.5px solid #DDDDDD', background: '#fff', color: '#1A1A1A', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Log In</button>
+              <button onClick={() => navigate('/auth', { state: { mode: 'login' } })} style={{ padding: '9px 20px', borderRadius: 9, border: '1.5px solid #DDDDDD', background: '#fff', color: '#1A1A1A', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Log In</button>
               <button onClick={() => navigate('/auth?mode=register')} style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,89,12,0.3)' }}>Get Started</button>
             </div>
           )}
         </div>
-      </div>
-    </nav>
+      {/* Hamburger */}
+          <button className="cd-mobile" onClick={() => setMobileOpen(true)} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', color: '#08060d', padding: 4, alignItems: 'center' }}>
+            <HiOutlineMenuAlt3 size={26} />
+          </button>
+        </div>
+      </nav>
+
+      {mobileOpen && (
+        <>
+          <div onClick={() => setMobileOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(8,6,13,0.5)', zIndex: 299 }} />
+          <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 280, background: '#fff', zIndex: 300, boxShadow: '-8px 0 40px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column', padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+              <span style={{ fontFamily: "'Georgia', serif", fontWeight: 700, fontSize: 20, color: '#08060d' }}>Adhyot</span>
+              <button onClick={() => setMobileOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b6375' }}><HiOutlineX size={22} /></button>
+            </div>
+            {user && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 16, borderBottom: '1px solid #DDDDDD', marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #E8590C, #ff7c35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff' }}>{initials}</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#08060d' }}>{name}</div>
+                </div>
+              </div>
+            )}
+            <div style={{ flex: 1 }}>
+              <a href="/courses" style={{ display: 'block', padding: '13px 0', fontSize: 16, fontWeight: 600, color: '#1A1A1A', textDecoration: 'none', borderBottom: '1px solid #f3f4f6' }}>Courses</a>
+              {user && <button onClick={() => { navigate('/dashboard'); setMobileOpen(false) }} style={{ width: '100%', padding: '13px 0', fontSize: 16, fontWeight: 600, color: '#1A1A1A', background: 'none', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', textAlign: 'left' }}>Dashboard</button>}
+            </div>
+            <div style={{ paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {user
+                ? <button onClick={() => { onLogout(); setMobileOpen(false) }} style={{ padding: '13px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Log Out</button>
+                : <button onClick={() => { navigate('/auth', { state: { mode: 'login' } }); setMobileOpen(false) }} style={{ padding: '13px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #E8590C, #ff7c35)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Get Started</button>
+              }
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -161,7 +198,7 @@ function EnrollCard({ course, enrolled, progressPct = 0, enrolling, onEnroll, us
   const domainColor = course.domain === 'QA Engineering' ? OG : '#7c3aed'
 
   return (
-    <div style={{ background: '#fff', borderRadius: 18, border: '1.5px solid #DDDDDD', boxShadow: '0 8px 40px rgba(0,0,0,0.1)', overflow: 'hidden', position: 'sticky', top: 88 }}>
+    <div className="cd-sticky-card" style={{ background: '#fff', borderRadius: 18, border: '1.5px solid #DDDDDD', boxShadow: '0 8px 40px rgba(0,0,0,0.1)', overflow: 'hidden', position: 'sticky', top: 88 }}>
       {/* Top accent */}
       <div style={{ height: 5, background: `linear-gradient(90deg, ${domainColor}, ${OG2})` }} />
 
@@ -187,14 +224,14 @@ function EnrollCard({ course, enrolled, progressPct = 0, enrolling, onEnroll, us
             </button>
           )
         ) : (
-          <button onClick={() => user ? onEnroll() : navigate('/auth')} disabled={enrolling} style={{ width: '100%', padding: '14px', borderRadius: 11, border: 'none', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 15, fontWeight: 700, cursor: enrolling ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 18px rgba(232,89,12,0.35)', marginBottom: 12, opacity: enrolling ? 0.8 : 1, transition: 'all 0.2s' }}>
+          <button onClick={() => user ? onEnroll() : navigate('/auth', { state: { mode: 'login' } })} disabled={enrolling} style={{ width: '100%', padding: '14px', borderRadius: 11, border: 'none', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 15, fontWeight: 700, cursor: enrolling ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 18px rgba(232,89,12,0.35)', marginBottom: 12, opacity: enrolling ? 0.8 : 1, transition: 'all 0.2s' }}>
             {enrolling ? 'Enrolling…' : course.is_free ? 'Enroll for Free' : 'Enroll Now'}
           </button>
         )}
 
         {!user && !enrolled && (
           <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', margin: '0 0 16px' }}>
-            <span style={{ color: OG, cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/auth')}>Log in</span> or <span style={{ color: OG, cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/auth?mode=register')}>sign up</span> to enroll
+            <span style={{ color: OG, cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/auth', { state: { mode: 'login' } })}>Log in</span> or <span style={{ color: OG, cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/auth', { state: { mode: 'register' } })}>sign up</span> to enroll
           </p>
         )}
 
@@ -204,7 +241,7 @@ function EnrollCard({ course, enrolled, progressPct = 0, enrolling, onEnroll, us
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[
             { icon: HiOutlineAcademicCap, label: 'Level', value: course.level },
-            { icon: HiOutlineClock,        label: 'Duration', value: course.duration ? `${course.duration} hours` : 'Self-paced' },
+            { icon: HiOutlineClock,        label: 'Duration', value: course.duration ? `${course.duration} hour${course.duration !== 1 ? "s" : ""}` : "Self-paced" },
             { icon: HiOutlineBookOpen,     label: 'Domain', value: course.domain },
             { icon: HiOutlineBadgeCheck,   label: 'Certificate', value: 'On completion' },
             { icon: HiOutlineUsers,        label: 'Access', value: 'Lifetime' },
@@ -280,7 +317,7 @@ export default function CourseDetail() {
   }
 
   const handleEnroll = async () => {
-    if (!user) { navigate('/auth'); return }
+    if (!user) { navigate('/auth', { state: { mode: 'login' } }); return }
     if (course.is_free) {
       setEnrolling(true)
       const existing = await supabase.from('enrollments').select('id').eq('user_id', user.id).eq('course_id', courseId).single()
@@ -317,16 +354,27 @@ export default function CourseDetail() {
   return (
     <div style={{ minHeight: '100vh', background: '#f4f5f7', fontFamily: 'system-ui, sans-serif' }}>
       <style>{`
-        @keyframes spin  { to { transform: rotate(360deg); } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-        * { box-sizing: border-box; }
+        @keyframes spin   { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        * { box-sizing:border-box; }
+        .cd-mobile  { display:none !important; }
+        .cd-desktop { display:flex !important; }
+        @media (max-width:768px) {
+          .cd-mobile      { display:flex !important; }
+          .cd-desktop     { display:none !important; }
+          .cd-hero-grid   { grid-template-columns:1fr !important; padding-bottom:16px; }
+          .cd-body-grid   { grid-template-columns:1fr !important; padding-top:24px !important; }
+          .cd-goals-grid  { grid-template-columns:1fr !important; }
+          .cd-hero-title  { font-size:24px !important; }
+          .cd-sticky-card { position:static !important; }
+        }
       `}</style>
 
       <Navbar user={user} profile={profile} onLogout={handleLogout} />
 
       {/* ── Hero ── */}
       <div style={{ background: 'linear-gradient(135deg, #08060d 0%, #1a0e06 60%, #08060d 100%)', paddingTop: 96, paddingBottom: 0 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 5% 0', display: 'grid', gridTemplateColumns: '1fr 360px', gap: 48, alignItems: 'start' }}>
+        <div className="cd-hero-grid" style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 5% 0', display: 'grid', gridTemplateColumns: '1fr 360px', gap: 48, alignItems: 'start' }}>
           {/* Left */}
           <div style={{ paddingBottom: 48, animation: 'fadeUp 0.5s ease both' }}>
             {/* Breadcrumb */}
@@ -345,7 +393,7 @@ export default function CourseDetail() {
             </div>
 
             {/* Title */}
-            <h1 style={{ fontSize: 36, fontWeight: 800, color: '#fff', fontFamily: "'Georgia', serif", margin: '0 0 16px', lineHeight: 1.25 }}>
+            <h1 className="cd-hero-title" style={{ fontSize: 36, fontWeight: 800, color: '#fff', fontFamily: "'Georgia', serif", margin: '0 0 16px', lineHeight: 1.25 }}>
               {course.title}
             </h1>
 
@@ -357,9 +405,9 @@ export default function CourseDetail() {
             {/* Stats row */}
             <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
               {[
-                { icon: HiOutlineBookOpen, label: `${modules.length} modules` },
-                { icon: HiOutlineDocument, label: `${totalLessons} lessons` },
-                { icon: HiOutlineClock,    label: course.duration ? `${course.duration} hours` : 'Self-paced' },
+                { icon: HiOutlineBookOpen, label: `${modules.length} module${modules.length !== 1 ? "s" : ""}` },
+                { icon: HiOutlineDocument, label: `${totalLessons} lesson${totalLessons !== 1 ? "s" : ""}` },
+                { icon: HiOutlineClock,    label: course.duration ? `${course.duration} hour${course.duration !== 1 ? "s" : ""}` : "Self-paced" },
                 { icon: HiOutlineAcademicCap, label: course.level },
               ].map(({ icon: Icon, label }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#9ca3af' }}>
@@ -385,7 +433,7 @@ export default function CourseDetail() {
       </div>
 
       {/* ── Body ── */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 5% 80px', display: 'grid', gridTemplateColumns: '1fr 360px', gap: 48, alignItems: 'start' }}>
+      <div className="cd-body-grid" style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 5% 80px', display: 'grid', gridTemplateColumns: '1fr 360px', gap: 48, alignItems: 'start' }}>
 
         {/* Left column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>
@@ -395,7 +443,7 @@ export default function CourseDetail() {
             <div style={{ animation: 'fadeUp 0.5s ease both' }}>
               <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 20 }}>What you'll learn</h2>
               <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #DDDDDD', padding: '24px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="cd-goals-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {goals.map((goal, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                       <div style={{ width: 20, height: 20, borderRadius: '50%', background: `linear-gradient(135deg, ${OG}, ${OG2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, boxShadow: '0 2px 6px rgba(232,89,12,0.3)' }}>
@@ -461,7 +509,7 @@ export default function CourseDetail() {
             </button>
           )
         ) : (
-          <button onClick={() => user ? handleEnroll() : navigate('/auth')} disabled={enrolling} style={{ padding: '12px 28px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,89,12,0.3)', opacity: enrolling ? 0.8 : 1 }}>
+          <button onClick={() => user ? handleEnroll() : navigate('/auth', { state: { mode: 'login' } })} disabled={enrolling} style={{ padding: '12px 28px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${OG}, ${OG2})`, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,89,12,0.3)', opacity: enrolling ? 0.8 : 1 }}>
             {enrolling ? 'Enrolling…' : course.is_free ? 'Enroll Free' : 'Enroll Now'}
           </button>
         )}

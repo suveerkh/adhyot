@@ -142,13 +142,13 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { navigate('/auth'); return }
+      if (!session) { navigate('/auth', { state: { mode: 'login' } }); return }
       setUser(session.user)
       setUserId(session.user.id)
       loadData(session.user.id)
     })
     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session) navigate('/auth')
+      if (!session) navigate('/auth', { state: { mode: 'login' } })
     })
     return () => listener.subscription.unsubscribe()
   }, [])

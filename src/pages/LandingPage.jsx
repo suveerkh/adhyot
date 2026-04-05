@@ -129,7 +129,7 @@ function Navbar() {
               )}
             </div>
           ) : (
-            <button onClick={() => navigate('/auth')} style={{
+            <button onClick={() => navigate('/auth', { state: { mode: 'login' } })} style={{
               padding: '9px 20px', borderRadius: 8, border: 'none',
               background: 'linear-gradient(135deg, #E8590C, #ff7c35)',
               color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
@@ -182,7 +182,7 @@ function Navbar() {
               ) : (
                 <>
                   <button onClick={() => { navigate('/auth', { state: { mode: 'register' } }); setMobileOpen(false) }} style={{ padding: '13px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #E8590C, #ff7c35)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Create Free Account</button>
-                  <button onClick={() => { navigate('/auth'); setMobileOpen(false) }} style={{ padding: '13px', borderRadius: 10, border: '1.5px solid #DDDDDD', background: '#fff', color: '#1A1A1A', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>Log In</button>
+                  <button onClick={() => { navigate('/auth', { state: { mode: 'login' } }); setMobileOpen(false) }} style={{ padding: '13px', borderRadius: 10, border: '1.5px solid #DDDDDD', background: '#fff', color: '#1A1A1A', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>Log In</button>
                 </>
               )}
             </div>

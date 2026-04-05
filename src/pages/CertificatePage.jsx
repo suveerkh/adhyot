@@ -112,7 +112,7 @@ export default function CertificatePage() {
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { navigate('/auth'); return }
+      if (!session) { navigate('/auth', { state: { mode: 'login' } }); return }
 
       const { data: profileData } = await supabase.from('users').select('name, email').eq('id', session.user.id).single()
       if (profileData) setProfile(profileData)

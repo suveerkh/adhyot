@@ -490,7 +490,7 @@ export default function CoursePage() {
   const [completed, setCompleted]     = useState({})   // lessonId -> bool
   const [quizPassed, setQuizPassed]   = useState({})   // lessonId -> bool (has a quiz been passed)
   const [expanded, setExpanded]       = useState({})
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768)
   const [lockedShake, setLockedShake] = useState(null) // lessonId being shaken
   const [showLockedToast, setShowLockedToast] = useState(false)
   const [userId, setUserId]           = useState(null)
@@ -703,6 +703,11 @@ export default function CoursePage() {
           75%     { transform: translateX(-2px); }
           90%     { transform: translateX(2px); }
         }
+        @media (max-width: 768px) {
+          .cp-content-pad { padding: 20px 16px 80px !important; }
+          .cp-lesson-title { font-size: 22px !important; }
+          .cp-nav-title { display: none !important; }
+        }
         @keyframes lockPulse {
           0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
           50%     { box-shadow: 0 0 0 6px rgba(239,68,68,0.2); }
@@ -822,13 +827,13 @@ export default function CoursePage() {
         {/* Main content */}
         <div ref={contentRef} style={{ flex: 1, overflowY: 'auto', background: '#f4f5f7' }}>
           {activeLesson ? (
-            <div style={{ maxWidth: 820, margin: '0 auto', padding: '36px 32px 80px' }}>
+            <div className="cp-content-pad" style={{ maxWidth: 820, margin: '0 auto', padding: '36px 32px 80px' }}>
               {/* Lesson header */}
               <div style={{ marginBottom: 32, animation: 'fadeUp 0.4s ease both' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: OG, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
                   {modules.find(m => m.lessons.some(l => l.id === activeLesson.id))?.title}
                 </div>
-                <h1 style={{ fontSize: 28, fontWeight: 800, color: '#08060d', fontFamily: "'Georgia', serif", margin: '0 0 12px', lineHeight: 1.3 }}>{activeLesson.title}</h1>
+                <h1 className="cp-lesson-title" style={{ fontSize: 28, fontWeight: 800, color: '#08060d', fontFamily: "'Georgia', serif", margin: '0 0 12px', lineHeight: 1.3 }}>{activeLesson.title}</h1>
                 <div style={{ height: 3, width: 48, background: `linear-gradient(90deg, ${OG}, ${OG2})`, borderRadius: 100 }} />
               </div>
 
