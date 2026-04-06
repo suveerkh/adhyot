@@ -398,7 +398,7 @@ function UsersSection() {
       </div>
 
       <div className="ad-table" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
           <thead>
             <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
               {['Name', 'Email', 'Phone', 'Role', 'Joined'].map(h => (
@@ -475,7 +475,7 @@ function PaymentsSection() {
       <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 24, letterSpacing: '-0.5px' }}>Payments & Enrollments</h2>
 
       <div className="ad-table" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
           <thead>
             <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
               {['Student', 'Course', 'Amount', 'Status', 'Date'].map(h => (
@@ -525,6 +525,13 @@ export default function AdminDashboard() {
   const [adminName, setAdminName] = useState('')
   const [stats, setStats] = useState({ students: 0, courses: 0, enrollments: 0, revenue: 0 })
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     const init = async () => {
@@ -555,14 +562,9 @@ export default function AdminDashboard() {
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
         * { box-sizing:border-box; }
+        .ad-table { overflow-x: auto; }
         @media (max-width: 768px) {
-          .ad-sidebar-wrap { transform: translateX(-100%); transition: transform 0.3s ease; }
-          .ad-sidebar-open  { transform: translateX(0) !important; }
-          .ad-topbar  { display: flex !important; }
-          .ad-main    { margin-left: 0 !important; padding: 72px 16px 40px !important; }
-          .ad-stats   { grid-template-columns: 1fr 1fr !important; }
-          .ad-table   { overflow-x: auto; }
-          .ad-table table { min-width: 600px; }
+          .ad-stats { grid-template-columns: 1fr 1fr !important; }
         }
         @media (max-width: 480px) {
           .ad-stats { grid-template-columns: 1fr !important; }
@@ -570,23 +572,27 @@ export default function AdminDashboard() {
       `}</style>
 
       {/* Mobile overlay */}
-      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:49 }} />}
+      {isMobile && sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:49 }} />
+      )}
 
-      {/* Sidebar wrapper for mobile slide */}
-      <div className={sidebarOpen ? 'ad-sidebar-wrap ad-sidebar-open' : 'ad-sidebar-wrap'} style={{ position:'fixed', top:0, left:0, bottom:0, zIndex:50, width:240, transition:'transform 0.3s ease', transform: typeof window !== "undefined" && window.innerWidth <= 768 && !sidebarOpen ? "translateX(-100%)" : "translateX(0)" }}>
+      {/* Sidebar */}
+      <div style={{ position:'fixed', top:0, left:0, bottom:0, width:240, zIndex:50, transform: isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)', transition:'transform 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
         <Sidebar active={active} setActive={(s) => { setActive(s); setSidebarOpen(false) }} onLogout={handleLogout} adminName={adminName} />
       </div>
 
       {/* Mobile topbar */}
-      <div className="ad-topbar" style={{ display:'none', position:'fixed', top:0, left:0, right:0, height:56, background:'#08060d', zIndex:48, alignItems:'center', padding:'0 16px', gap:12, borderBottom:'1px solid #1f2937' }}>
-        <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', color:'#fff', padding:4, display:'flex', alignItems:'center' }}>
-          <HiOutlineMenuAlt3 size={24} />
-        </button>
-        <div style={{ fontFamily:"'Georgia', serif", fontWeight:700, fontSize:18, color:'#fff' }}>Adhyot Admin</div>
-      </div>
+      {isMobile && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, height:56, background:'#08060d', zIndex:48, display:'flex', alignItems:'center', padding:'0 16px', gap:12, borderBottom:'1px solid #1f2937' }}>
+          <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', color:'#fff', padding:4, display:'flex', alignItems:'center' }}>
+            <HiOutlineMenuAlt3 size={24} />
+          </button>
+          <div style={{ fontFamily:"'Georgia', serif", fontWeight:700, fontSize:18, color:'#fff' }}>Adhyot Admin</div>
+        </div>
+      )}
 
       {/* Main content */}
-      <main className="ad-main" style={{ marginLeft: 240, flex: 1, padding: '40px', animation: 'fadeUp 0.5s ease forwards' }}>
+      <main style={{ marginLeft: isMobile ? 0 : 240, flex: 1, padding: isMobile ? '72px 16px 40px' : '40px', animation: 'fadeUp 0.5s ease forwards' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           {active === 'overview' && <Overview stats={stats} />}
           {active === 'courses' && <CoursesSection />}
