@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   HiOutlineHome, HiOutlineUsers, HiOutlineBookOpen,
   HiOutlineCreditCard, HiOutlineLogout, HiOutlinePlus,
-  HiOutlinePencil, HiOutlineTrash, HiOutlineX, HiOutlineEye,
+  HiOutlinePencil, HiOutlineTrash, HiOutlineX, HiOutlineMenuAlt3,
 } from 'react-icons/hi'
 import supabase from '../supabaseClient'
 
@@ -15,14 +15,18 @@ const SECTIONS = [
 ]
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
-function Sidebar({ active, setActive, onLogout, adminName }) {
+function Sidebar({ active, setActive, onLogout, adminName, open, onClose }) {
   return (
+    <>
+    {/* Mobile overlay */}
+    {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 49, display: 'none' }} className="ad-overlay" />}
     <aside style={{
       width: 240, minHeight: '100vh', background: '#08060d',
       display: 'flex', flexDirection: 'column',
       padding: '0 0 24px', flexShrink: 0,
       position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50,
-    }}>
+      transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+    }} className={open ? 'ad-sidebar-open' : 'ad-sidebar'}>
       {/* Logo */}
       <div style={{ padding: '24px 20px', borderBottom: '1px solid #1f2937' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -58,21 +62,6 @@ function Sidebar({ active, setActive, onLogout, adminName }) {
             {label}
           </button>
         ))}
-
-        <div style={{ height: 1, background: '#1f2937', margin: '8px 0' }} />
-
-        <a href="/courses" target="_blank" rel="noreferrer" style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '10px 12px', borderRadius: 10,
-          color: '#9ca3af', fontSize: 14, fontWeight: 500,
-          textDecoration: 'none', transition: 'all 0.2s',
-          borderLeft: '3px solid transparent',
-        }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af' }}
-        >
-          <HiOutlineEye size={18} /> Preview Courses Page
-        </a>
       </nav>
 
       {/* Admin info + logout */}
@@ -100,6 +89,7 @@ function Sidebar({ active, setActive, onLogout, adminName }) {
         ><HiOutlineLogout size={16} /> Log Out</button>
       </div>
     </aside>
+    </>
   )
 }
 
@@ -126,7 +116,7 @@ function Overview({ stats }) {
   return (
     <div>
       <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 24, letterSpacing: '-0.5px' }}>Overview</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
+      <div className="ad-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
         <StatCard label="Total Students" value={stats.students} />
         <StatCard label="Total Courses" value={stats.courses} color="#7c3aed" />
         <StatCard label="Total Enrollments" value={stats.enrollments} color="#0ea5e9" />
@@ -140,7 +130,7 @@ function Overview({ stats }) {
 function CourseModal({ course, onClose, onSave }) {
   const [form, setForm] = useState(course || {
     title: '', domain: 'QA Engineering', description: '',
-    level: 'Beginner', price: 0, is_free: false, is_published: false, has_certificate: true,
+    level: 'Beginner', price: 0, is_free: false, is_published: false,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -225,11 +215,6 @@ function CourseModal({ course, onClose, onSave }) {
               <input type="checkbox" checked={form.is_published}
                 onChange={e => update('is_published', e.target.checked)} />
               Published
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#1A1A1A' }}>
-              <input type="checkbox" checked={form.has_certificate ?? true}
-                onChange={e => update('has_certificate', e.target.checked)} />
-              Issue Certificate
             </label>
           </div>
 
@@ -337,11 +322,6 @@ function CoursesSection() {
                     color: course.is_published ? '#16a34a' : '#6b7280',
                   }}>{course.is_published ? 'Published' : 'Draft'}</span>
                   {course.is_free && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, fontWeight: 600, background: '#dbeafe', color: '#2563eb' }}>Free</span>}
-                  <span style={{
-                    fontSize: 11, padding: '2px 8px', borderRadius: 100, fontWeight: 600,
-                    background: course.has_certificate !== false ? '#FFF3EC' : '#f3f4f6',
-                    color: course.has_certificate !== false ? '#E8590C' : '#9ca3af',
-                  }}>{course.has_certificate !== false ? 'Certificate' : 'No Certificate'}</span>
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: '#08060d', marginBottom: 2 }}>{course.title}</div>
                 <div style={{ fontSize: 13, color: '#6b6375' }}>{course.level} · {course.is_free ? 'Free' : `₹${course.price?.toLocaleString()}`}</div>
@@ -422,8 +402,8 @@ function UsersSection() {
         />
       </div>
 
-      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="ad-table-scroll" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
           <thead>
             <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
               {['Name', 'Email', 'Phone', 'Role', 'Joined'].map(h => (
@@ -480,8 +460,7 @@ function PaymentsSection() {
       setLoading(true)
       const { data } = await supabase
         .from('enrollments')
-        .select('*, users!inner(name, email, role), courses(title)')
-        .eq('users.role', 'student')
+        .select('*, users(name, email), courses(title)')
         .order('created_at', { ascending: false })
       setPayments(data || [])
       setLoading(false)
@@ -500,20 +479,20 @@ function PaymentsSection() {
     <div>
       <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 24, letterSpacing: '-0.5px' }}>Payments & Enrollments</h2>
 
-      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="ad-table-scroll" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
           <thead>
             <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
-              {['Student', 'Course', 'Progress', 'Amount', 'Status', 'Date'].map(h => (
+              {['Student', 'Course', 'Amount', 'Status', 'Date'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Loading...</td></tr>
+              <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Loading...</td></tr>
             ) : payments.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>No enrollments yet</td></tr>
+              <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>No enrollments yet</td></tr>
             ) : payments.map((p, i) => {
               const sc = statusColor(p.payment_status)
               return (
@@ -523,14 +502,6 @@ function PaymentsSection() {
                     <div style={{ fontSize: 12, color: '#9ca3af' }}>{p.users?.email}</div>
                   </td>
                   <td style={{ padding: '14px 16px', fontSize: 14, color: '#6b6375' }}>{p.courses?.title}</td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ flex: 1, height: 6, background: '#f3f4f6', borderRadius: 100, overflow: 'hidden', minWidth: 80 }}>
-                        <div style={{ height: '100%', width: `${p.progress_pct || 0}%`, background: p.progress_pct === 100 ? 'linear-gradient(90deg, #16a34a, #22c55e)' : 'linear-gradient(90deg, #E8590C, #ff7c35)', borderRadius: 100, transition: 'width 0.4s ease' }} />
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: p.progress_pct === 100 ? '#16a34a' : p.progress_pct > 0 ? '#E8590C' : '#9ca3af', minWidth: 32 }}>{p.progress_pct || 0}%</span>
-                    </div>
-                  </td>
                   <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 700, color: '#08060d' }}>
                     {p.amount ? `₹${p.amount?.toLocaleString()}` : 'Free'}
                   </td>
@@ -558,6 +529,7 @@ export default function AdminDashboard() {
   const [active, setActive] = useState('overview')
   const [adminName, setAdminName] = useState('')
   const [stats, setStats] = useState({ students: 0, courses: 0, enrollments: 0, revenue: 0 })
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -571,7 +543,7 @@ export default function AdminDashboard() {
       const [{ count: students }, { count: courses }, { count: enrollments }] = await Promise.all([
         supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'student'),
         supabase.from('courses').select('*', { count: 'exact', head: true }),
-        supabase.from('enrollments').select('*, users!inner(role)', { count: 'exact', head: true }).eq('users.role', 'student'),
+        supabase.from('enrollments').select('*', { count: 'exact', head: true }),
       ])
       setStats({ students: students || 0, courses: courses || 0, enrollments: enrollments || 0, revenue: 0 })
     }
@@ -586,13 +558,35 @@ export default function AdminDashboard() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f9fafb', fontFamily: 'system-ui, sans-serif' }}>
       <style>{`
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        * { box-sizing:border-box; }
+        .ad-sidebar { transform: translateX(0); }
+        @media (max-width: 768px) {
+          .ad-sidebar { transform: translateX(-100%); }
+          .ad-sidebar-open { transform: translateX(0); }
+          .ad-overlay { display: block !important; }
+          .ad-topbar { display: flex !important; }
+          .ad-main { margin-left: 0 !important; padding: 72px 16px 40px !important; }
+          .ad-table-scroll { overflow-x: auto; }
+          .ad-stats-grid { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .ad-stats-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
-      <Sidebar active={active} setActive={setActive} onLogout={handleLogout} adminName={adminName} />
+      <Sidebar active={active} setActive={(s) => { setActive(s); setSidebarOpen(false) }} onLogout={handleLogout} adminName={adminName} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Mobile topbar */}
+      <div className="ad-topbar" style={{ display: 'none', position: 'fixed', top: 0, left: 0, right: 0, height: 56, background: '#08060d', zIndex: 48, alignItems: 'center', padding: '0 16px', gap: 12, borderBottom: '1px solid #1f2937' }}>
+        <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', padding: 4, display: 'flex', alignItems: 'center' }}>
+          <HiOutlineMenuAlt3 size={24} />
+        </button>
+        <div style={{ fontFamily: "'Georgia', serif", fontWeight: 700, fontSize: 18, color: '#fff' }}>Adhyot Admin</div>
+      </div>
 
       {/* Main content */}
-      <main style={{ marginLeft: 240, flex: 1, padding: '40px', animation: 'fadeUp 0.5s ease forwards' }}>
+      <main className="ad-main" style={{ marginLeft: 240, flex: 1, padding: '40px', animation: 'fadeUp 0.5s ease forwards' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           {active === 'overview' && <Overview stats={stats} />}
           {active === 'courses' && <CoursesSection />}

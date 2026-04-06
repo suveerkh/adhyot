@@ -1363,16 +1363,21 @@ function OverviewTab({ course, onUpdate, onDirtyChange, onFormChange }) {
   const [saved, setSaved] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [newGoal, setNewGoal] = useState('')
-  const update = (k, v) => { setForm(f => { const next = { ...f, [k]: v }; if (onFormChange) onFormChange(next); return next }); if (!dirty) { setDirty(true); onDirtyChange?.(true) } }
+  const update = (k, v) => { setForm(f => { const next = { ...f, [k]: v }; if (onFormChange) onFormChange(next); triggerAutosave(next); return next }); if (!dirty) { setDirty(true); onDirtyChange?.(true) } }
   const addGoal = () => { if (!newGoal.trim()) return; update('goals', [...form.goals, newGoal.trim()]); setNewGoal('') }
   const removeGoal = (i) => update('goals', form.goals.filter((_, idx) => idx !== i))
-  const handleSave = async () => {
+  const debounceRef = useRef(null)
+  const autosave = async (data) => {
     setSaving(true)
-    await supabase.from('courses').update(form).eq('id', course.id)
-    onUpdate(form)
+    await supabase.from('courses').update(data).eq('id', course.id)
+    onUpdate(data)
     setSaving(false); setSaved(true)
     setDirty(false); onDirtyChange?.(false)
     setTimeout(() => setSaved(false), 2000)
+  }
+  const triggerAutosave = (data) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => autosave(data), 1500)
   }
   return (
     <div style={{ maxWidth: 720 }}>
@@ -1396,7 +1401,7 @@ function OverviewTab({ course, onUpdate, onDirtyChange, onFormChange }) {
             <button onClick={addGoal} style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: '#E8590C', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>+ Add</button>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+        <div className="cb-overview-grid3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
           <div><label style={labelStyle}>Domain</label>
             <select style={inputStyle} value={form.domain} onChange={e => update('domain', e.target.value)}>
               <option>QA Engineering</option><option>Cybersecurity</option>
@@ -1409,7 +1414,7 @@ function OverviewTab({ course, onUpdate, onDirtyChange, onFormChange }) {
           </div>
           <div><label style={labelStyle}>Duration (hrs)</label><input style={inputStyle} type="number" value={form.duration || ''} onChange={e => update('duration', e.target.value)} /></div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="cb-overview-grid2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <div><label style={labelStyle}>Price (₹)</label><input style={inputStyle} type="number" value={form.price || 0} onChange={e => update('price', Number(e.target.value))} disabled={form.is_free} /></div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 22 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
@@ -1430,11 +1435,13 @@ function OverviewTab({ course, onUpdate, onDirtyChange, onFormChange }) {
             </label>
           </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={handleSave} disabled={saving} style={{ padding: '11px 28px', borderRadius: 8, border: 'none', background: saved ? '#16a34a' : saving ? '#f5a882' : 'linear-gradient(135deg, #E8590C, #ff7c35)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 14px rgba(232,89,12,0.3)', transition: 'all 0.3s' }}>
-            {saved ? <><HiOutlineCheck size={15} /> Saved!</> : saving ? 'Saving...' : 'Save Overview'}
-          </button>
-        </div>
+        {(saving || saved) && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: saved ? '#16a34a' : '#9ca3af', display: 'flex', alignItems: 'center', gap: 6 }}>
+              {saving ? 'Saving…' : <><HiOutlineCheck size={13} /> Saved!</>}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1476,6 +1483,13 @@ export default function CourseBuilder() {
       <style>{`
         @keyframes spin  { to { transform: rotate(360deg); } }
         @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        * { box-sizing: border-box; }
+        @media (max-width: 768px) {
+          .cb-topbar-title { display: none !important; }
+          .cb-content { padding: 16px !important; }
+          .cb-overview-grid3 { grid-template-columns: 1fr !important; }
+          .cb-overview-grid2 { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       {/* Top Bar */}
@@ -1485,7 +1499,7 @@ export default function CourseBuilder() {
           onMouseLeave={e => e.currentTarget.style.background = 'none'}
         ><HiOutlineArrowLeft size={16} /> Dashboard</button>
         <div style={{ width: 1, height: 20, background: '#e5e7eb', marginRight: 20 }} />
-        <div style={{ flex: 1 }}>
+        <div className="cb-topbar-title" style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif" }}>{course?.title}</div>
           <div style={{ fontSize: 11, color: '#9ca3af' }}>{course?.domain} · {course?.level}</div>
         </div>
@@ -1514,7 +1528,7 @@ export default function CourseBuilder() {
       )}
 
       {/* Content */}
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
+      <div className="cb-content" style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
         {editingLesson ? (
           <LessonEditor lesson={editingLesson} courseId={courseId} onBack={() => guardedAction(() => setEditingLesson(null))} />
         ) : (

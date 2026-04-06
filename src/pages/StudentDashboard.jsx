@@ -4,7 +4,7 @@ import {
   HiOutlineBookOpen, HiOutlineAcademicCap, HiOutlineClock,
   HiOutlineCheck, HiOutlinePlay, HiOutlineLogout,
   HiOutlineChevronRight, HiOutlineStar, HiOutlineDocument,
-  HiOutlineCollection, HiOutlineUser,
+  HiOutlineCollection, HiOutlineUser, HiOutlineMenuAlt3, HiOutlineX,
 } from 'react-icons/hi'
 import supabase from '../supabaseClient'
 
@@ -139,6 +139,7 @@ export default function StudentDashboard() {
   const [loading, setLoading]       = useState(true)
   const [activeTab, setActiveTab]   = useState('courses')
   const [userId, setUserId]         = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -207,13 +208,28 @@ export default function StudentDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#f4f5f7', fontFamily: 'system-ui, sans-serif' }}>
       <style>{`
-        @keyframes spin   { to { transform: rotate(360deg); } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-        * { box-sizing: border-box; }
+        @keyframes spin   { to { transform:rotate(360deg); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+        * { box-sizing:border-box; }
+        .sd-sidebar { transform:translateX(0); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+        @media (max-width: 768px) {
+          .sd-sidebar { transform:translateX(-100%); position:fixed !important; }
+          .sd-sidebar-open { transform:translateX(0); }
+          .sd-topbar { display:flex !important; }
+          .sd-main { margin-left:0 !important; padding:72px 16px 80px !important; }
+          .sd-stats-grid { grid-template-columns:1fr 1fr !important; }
+          .sd-cards-grid { grid-template-columns:1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .sd-stats-grid { grid-template-columns:1fr 1fr !important; }
+        }
       `}</style>
 
+      {/* Mobile overlay */}
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:49 }} />}
+
       {/* ── Sidebar ── */}
-      <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: 240, background: '#08060d', zIndex: 50, display: 'flex', flexDirection: 'column', padding: '0 0 24px' }}>
+      <div className={sidebarOpen ? 'sd-sidebar sd-sidebar-open' : 'sd-sidebar'} style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: 240, background: '#08060d', zIndex: 50, display: 'flex', flexDirection: 'column', padding: '0 0 24px' }}>
         {/* Logo */}
         <div style={{ padding: '22px 20px', borderBottom: '1px solid #1f1815' }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
@@ -232,7 +248,7 @@ export default function StudentDashboard() {
             { id: 'certificates', icon: HiOutlineStar,         label: 'Certificates' },
             { id: 'profile',      icon: HiOutlineUser,         label: 'Profile' },
           ].map(({ id, icon: Icon, label }) => (
-            <button key={id} onClick={() => setActiveTab(id)} style={{
+            <button key={id} onClick={() => { setActiveTab(id); setSidebarOpen(false) }} style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
               borderRadius: 10, border: 'none', cursor: 'pointer', textAlign: 'left',
               background: activeTab === id ? 'rgba(232,89,12,0.15)' : 'transparent',
@@ -274,8 +290,16 @@ export default function StudentDashboard() {
         </div>
       </div>
 
+      {/* Mobile topbar */}
+      <div className="sd-topbar" style={{ display:'none', position:'fixed', top:0, left:0, right:0, height:56, background:'#08060d', zIndex:48, alignItems:'center', padding:'0 16px', gap:12, borderBottom:'1px solid #1f1815' }}>
+        <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', color:'#fff', padding:4, display:'flex', alignItems:'center' }}>
+          <HiOutlineMenuAlt3 size={24} />
+        </button>
+        <div style={{ fontFamily:"'Georgia', serif", fontWeight:700, fontSize:18, color:'#fff' }}>Adhyot</div>
+      </div>
+
       {/* ── Main ── */}
-      <div style={{ marginLeft: 240, padding: '36px 40px 80px', minHeight: '100vh' }}>
+      <div className="sd-main" style={{ marginLeft: 240, padding: '36px 40px 80px', minHeight: '100vh' }}>
 
         {/* My Courses tab */}
         {activeTab === 'courses' && (
@@ -291,7 +315,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 36 }}>
+            <div className="sd-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 36 }}>
               <StatCard icon={HiOutlineBookOpen}    label="Enrolled"    value={enrollments.length}  color={OG}        bg={OGB} />
               <StatCard icon={HiOutlinePlay}        label="In Progress" value={inProgress.length}   color="#3b82f6"   bg="#eff6ff" />
               <StatCard icon={HiOutlineCheck}       label="Completed"   value={completed.length}    color="#16a34a"   bg="#f0fdf4" />
@@ -304,7 +328,7 @@ export default function StudentDashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <h2 style={{ fontSize: 18, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", margin: 0 }}>Continue Learning</h2>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }} className="sd-cards-grid">
                   {inProgress.map((e, i) => (
                     <div key={e.id} style={{ animation: `fadeUp 0.4s ease ${i * 0.06}s both` }}>
                       <CourseCard enrollment={e} navigate={navigate} setTab={setActiveTab} />
@@ -318,7 +342,7 @@ export default function StudentDashboard() {
             {notStarted.length > 0 && (
               <div style={{ marginBottom: 36 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 16 }}>Not Started</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }} className="sd-cards-grid">
                   {notStarted.map((e, i) => (
                     <div key={e.id} style={{ animation: `fadeUp 0.4s ease ${i * 0.06}s both` }}>
                       <CourseCard enrollment={e} navigate={navigate} setTab={setActiveTab} />
@@ -332,7 +356,7 @@ export default function StudentDashboard() {
             {completed.length > 0 && (
               <div style={{ marginBottom: 36 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 16 }}>Completed</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }} className="sd-cards-grid">
                   {completed.map((e, i) => (
                     <div key={e.id} style={{ animation: `fadeUp 0.4s ease ${i * 0.06}s both` }}>
                       <CourseCard enrollment={e} navigate={navigate} setTab={setActiveTab} />

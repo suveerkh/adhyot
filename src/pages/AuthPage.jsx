@@ -106,7 +106,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={{
+    <div className="auth-grid" style={{
       minHeight: '100vh',
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
@@ -146,8 +146,9 @@ export default function AuthPage() {
         }
         @media (max-width: 768px) {
           .auth-left { display: none !important; }
-          .auth-right { grid-column: 1 / -1 !important; }
+          .auth-right { grid-column: 1 / -1 !important; padding: 32px 20px !important; }
           .auth-grid { grid-template-columns: 1fr !important; }
+          .auth-mobile-logo { display: flex !important; }
         }
       `}</style>
 
@@ -203,6 +204,11 @@ export default function AuthPage() {
         padding: '48px 5%',
       }}>
         <div style={{ width: '100%', maxWidth: 420, animation: 'fadeUp 0.6s ease forwards' }}>
+          {/* Mobile logo — only visible when left panel is hidden */}
+          <div className="auth-mobile-logo" style={{ display: 'none', alignItems: 'center', gap: 10, marginBottom: 32, justifyContent: 'center' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #E8590C, #ff8c42)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Georgia', serif", fontWeight: 700, color: '#fff', fontSize: 18 }}>A</div>
+            <span style={{ fontFamily: "'Georgia', serif", fontWeight: 700, fontSize: 22, color: '#08060d' }}>Adhyot</span>
+          </div>
 
           {/* Forgot password success */}
           {mode === 'forgot' && submitted ? (
