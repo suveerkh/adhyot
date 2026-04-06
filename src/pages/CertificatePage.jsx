@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { HiOutlineDownload, HiOutlineArrowLeft, HiOutlineBadgeCheck, HiOutlineStar } from 'react-icons/hi'
-import { jsPDF } from 'jspdf'
 import supabase from '../supabaseClient'
 
 const OG  = '#E8590C'
