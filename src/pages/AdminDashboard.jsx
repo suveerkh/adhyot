@@ -573,7 +573,7 @@ export default function AdminDashboard() {
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:49 }} />}
 
       {/* Sidebar wrapper for mobile slide */}
-      <div className={sidebarOpen ? 'ad-sidebar-wrap ad-sidebar-open' : 'ad-sidebar-wrap'} style={{ position:'fixed', top:0, left:0, bottom:0, zIndex:50 }}>
+      <div className={sidebarOpen ? 'ad-sidebar-wrap ad-sidebar-open' : 'ad-sidebar-wrap'} style={{ position:'fixed', top:0, left:0, bottom:0, zIndex:50, width:240, transition:'transform 0.3s ease', transform: typeof window !== "undefined" && window.innerWidth <= 768 && !sidebarOpen ? "translateX(-100%)" : "translateX(0)" }}>
         <Sidebar active={active} setActive={(s) => { setActive(s); setSidebarOpen(false) }} onLogout={handleLogout} adminName={adminName} />
       </div>
 
