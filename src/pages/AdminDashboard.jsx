@@ -15,18 +15,14 @@ const SECTIONS = [
 ]
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
-function Sidebar({ active, setActive, onLogout, adminName, open, onClose }) {
+function Sidebar({ active, setActive, onLogout, adminName }) {
   return (
-    <>
-    {/* Mobile overlay */}
-    {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 49, display: 'none' }} className="ad-overlay" />}
     <aside style={{
       width: 240, minHeight: '100vh', background: '#08060d',
       display: 'flex', flexDirection: 'column',
       padding: '0 0 24px', flexShrink: 0,
       position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50,
-      transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
-    }} className={open ? 'ad-sidebar-open' : 'ad-sidebar'}>
+    }}>
       {/* Logo */}
       <div style={{ padding: '24px 20px', borderBottom: '1px solid #1f2937' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -89,7 +85,6 @@ function Sidebar({ active, setActive, onLogout, adminName, open, onClose }) {
         ><HiOutlineLogout size={16} /> Log Out</button>
       </div>
     </aside>
-    </>
   )
 }
 
@@ -116,7 +111,7 @@ function Overview({ stats }) {
   return (
     <div>
       <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 24, letterSpacing: '-0.5px' }}>Overview</h2>
-      <div className="ad-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
+      <div className="ad-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
         <StatCard label="Total Students" value={stats.students} />
         <StatCard label="Total Courses" value={stats.courses} color="#7c3aed" />
         <StatCard label="Total Enrollments" value={stats.enrollments} color="#0ea5e9" />
@@ -402,8 +397,8 @@ function UsersSection() {
         />
       </div>
 
-      <div className="ad-table-scroll" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+      <div className="ad-table" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
               {['Name', 'Email', 'Phone', 'Role', 'Joined'].map(h => (
@@ -479,8 +474,8 @@ function PaymentsSection() {
     <div>
       <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 24, letterSpacing: '-0.5px' }}>Payments & Enrollments</h2>
 
-      <div className="ad-table-scroll" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+      <div className="ad-table" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
               {['Student', 'Course', 'Amount', 'Status', 'Date'].map(h => (
@@ -560,29 +555,34 @@ export default function AdminDashboard() {
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
         * { box-sizing:border-box; }
-        .ad-sidebar { transform: translateX(0); }
         @media (max-width: 768px) {
-          .ad-sidebar { transform: translateX(-100%); }
-          .ad-sidebar-open { transform: translateX(0); }
-          .ad-overlay { display: block !important; }
-          .ad-topbar { display: flex !important; }
-          .ad-main { margin-left: 0 !important; padding: 72px 16px 40px !important; }
-          .ad-table-scroll { overflow-x: auto; }
-          .ad-stats-grid { grid-template-columns: 1fr 1fr !important; }
+          .ad-sidebar-wrap { transform: translateX(-100%); transition: transform 0.3s ease; }
+          .ad-sidebar-open  { transform: translateX(0) !important; }
+          .ad-topbar  { display: flex !important; }
+          .ad-main    { margin-left: 0 !important; padding: 72px 16px 40px !important; }
+          .ad-stats   { grid-template-columns: 1fr 1fr !important; }
+          .ad-table   { overflow-x: auto; }
+          .ad-table table { min-width: 600px; }
         }
         @media (max-width: 480px) {
-          .ad-stats-grid { grid-template-columns: 1fr !important; }
+          .ad-stats { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
-      <Sidebar active={active} setActive={(s) => { setActive(s); setSidebarOpen(false) }} onLogout={handleLogout} adminName={adminName} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* Mobile overlay */}
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:49 }} />}
+
+      {/* Sidebar wrapper for mobile slide */}
+      <div className={sidebarOpen ? 'ad-sidebar-wrap ad-sidebar-open' : 'ad-sidebar-wrap'} style={{ position:'fixed', top:0, left:0, bottom:0, zIndex:50 }}>
+        <Sidebar active={active} setActive={(s) => { setActive(s); setSidebarOpen(false) }} onLogout={handleLogout} adminName={adminName} />
+      </div>
 
       {/* Mobile topbar */}
-      <div className="ad-topbar" style={{ display: 'none', position: 'fixed', top: 0, left: 0, right: 0, height: 56, background: '#08060d', zIndex: 48, alignItems: 'center', padding: '0 16px', gap: 12, borderBottom: '1px solid #1f2937' }}>
-        <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', padding: 4, display: 'flex', alignItems: 'center' }}>
+      <div className="ad-topbar" style={{ display:'none', position:'fixed', top:0, left:0, right:0, height:56, background:'#08060d', zIndex:48, alignItems:'center', padding:'0 16px', gap:12, borderBottom:'1px solid #1f2937' }}>
+        <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', color:'#fff', padding:4, display:'flex', alignItems:'center' }}>
           <HiOutlineMenuAlt3 size={24} />
         </button>
-        <div style={{ fontFamily: "'Georgia', serif", fontWeight: 700, fontSize: 18, color: '#fff' }}>Adhyot Admin</div>
+        <div style={{ fontFamily:"'Georgia', serif", fontWeight:700, fontSize:18, color:'#fff' }}>Adhyot Admin</div>
       </div>
 
       {/* Main content */}
