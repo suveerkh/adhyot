@@ -296,14 +296,25 @@ function PDFBlock({ block, onChange }) {
 function QuizBlock({ block, onChange, isAssessment }) {
   const c = block.content || { title: '', questions: [], pass_score: 70, time_limit: 60 }
   const [newQ, setNewQ] = useState({ question: '', options: ['', '', '', ''], correct: 0 })
+  const [editingId, setEditingId] = useState(null)
+  const [editQ, setEditQ] = useState(null)
   const color = isAssessment ? '#dc2626' : '#7c3aed'
+
   const addQuestion = () => {
     if (!newQ.question.trim() || newQ.options.some(o => !o.trim())) return
     onChange({ ...c, questions: [...(c.questions || []), { ...newQ, id: Date.now() }] })
     setNewQ({ question: '', options: ['', '', '', ''], correct: 0 })
   }
   const removeQuestion = (id) => onChange({ ...c, questions: c.questions.filter(q => q.id !== id) })
-  const updateOption = (i, val) => setNewQ(q => ({ ...q, options: q.options.map((o, idx) => idx === i ? val : o) }))
+  const startEdit = (q) => { setEditingId(q.id); setEditQ({ question: q.question, options: [...q.options], correct: q.correct }) }
+  const commitEdit = () => {
+    if (!editQ.question.trim() || editQ.options.some(o => !o.trim())) return
+    onChange({ ...c, questions: c.questions.map(q => q.id === editingId ? { ...q, ...editQ } : q) })
+    setEditingId(null); setEditQ(null)
+  }
+  const updateNewOption = (i, val) => setNewQ(q => ({ ...q, options: q.options.map((o, idx) => idx === i ? val : o) }))
+  const updateEditOption = (i, val) => setEditQ(q => ({ ...q, options: q.options.map((o, idx) => idx === i ? val : o) }))
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {isAssessment && (
@@ -327,21 +338,48 @@ function QuizBlock({ block, onChange, isAssessment }) {
           </div>
         )}
       </div>
+
       {(c.questions || []).map((q, i) => (
-        <div key={q.id} style={{ background: '#f9fafb', borderRadius: 10, padding: '14px', border: '1px solid #e5e7eb' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#08060d' }}>Q{i + 1}. {q.question}</span>
-            <button onClick={() => removeQuestion(q.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}><HiOutlineTrash size={14} /></button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            {q.options.map((opt, idx) => (
-              <div key={idx} style={{ padding: '6px 10px', borderRadius: 6, fontSize: 12, background: idx === q.correct ? '#dcfce7' : '#fff', border: `1px solid ${idx === q.correct ? '#16a34a' : '#e5e7eb'}`, color: idx === q.correct ? '#16a34a' : '#6b7280', fontWeight: idx === q.correct ? 600 : 400 }}>
-                {String.fromCharCode(65 + idx)}. {opt}
+        <div key={q.id} style={{ background: '#f9fafb', borderRadius: 10, padding: '14px', border: `1px solid ${editingId === q.id ? color : '#e5e7eb'}`, transition: 'border-color 0.2s' }}>
+          {editingId === q.id && editQ ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: 0.5 }}>Editing Q{i + 1}</div>
+              <input autoFocus style={inputStyle} value={editQ.question} onChange={e => setEditQ(q => ({ ...q, question: e.target.value }))} placeholder="Question text" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {editQ.options.map((opt, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="radio" name={`edit_correct_${q.id}`} checked={editQ.correct === idx} onChange={() => setEditQ(q => ({ ...q, correct: idx }))} />
+                    <input style={{ ...inputStyle, fontSize: 13, borderColor: editQ.correct === idx ? '#16a34a' : '#e5e7eb' }} value={opt} onChange={e => updateEditOption(idx, e.target.value)} placeholder={`Option ${String.fromCharCode(65 + idx)}`} />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+              <div style={{ fontSize: 11, color: '#9ca3af' }}>Select the radio button next to the correct answer</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={commitEdit} style={{ padding: '7px 16px', borderRadius: 7, border: 'none', background: color, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                <button onClick={() => { setEditingId(null); setEditQ(null) }} style={{ padding: '7px 14px', borderRadius: 7, border: '1.5px solid #DDDDDD', background: '#fff', color: '#6b6375', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#08060d', flex: 1, marginRight: 8 }}>Q{i + 1}. {q.question}</span>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <button onClick={() => startEdit(q)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: color, padding: 2 }}><HiOutlinePencil size={13} /></button>
+                  <button onClick={() => removeQuestion(q.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 2 }}><HiOutlineTrash size={13} /></button>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {q.options.map((opt, idx) => (
+                  <div key={idx} style={{ padding: '6px 10px', borderRadius: 6, fontSize: 12, background: idx === q.correct ? '#dcfce7' : '#fff', border: `1px solid ${idx === q.correct ? '#16a34a' : '#e5e7eb'}`, color: idx === q.correct ? '#16a34a' : '#6b7280', fontWeight: idx === q.correct ? 600 : 400 }}>
+                    {String.fromCharCode(65 + idx)}. {opt}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       ))}
+
       <div style={{ background: `${color}08`, borderRadius: 12, padding: '16px', border: `1.5px dashed ${color}40` }}>
         <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Add Question</div>
         <input style={{ ...inputStyle, marginBottom: 10 }} placeholder="Enter your question" value={newQ.question} onChange={e => setNewQ(q => ({ ...q, question: e.target.value }))} />
@@ -349,7 +387,7 @@ function QuizBlock({ block, onChange, isAssessment }) {
           {newQ.options.map((opt, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input type="radio" name={`correct_${block.id}`} checked={newQ.correct === i} onChange={() => setNewQ(q => ({ ...q, correct: i }))} />
-              <input style={{ ...inputStyle, fontSize: 13 }} placeholder={`Option ${String.fromCharCode(65 + i)}`} value={opt} onChange={e => updateOption(i, e.target.value)} />
+              <input style={{ ...inputStyle, fontSize: 13 }} placeholder={`Option ${String.fromCharCode(65 + i)}`} value={opt} onChange={e => updateNewOption(i, e.target.value)} />
             </div>
           ))}
         </div>
