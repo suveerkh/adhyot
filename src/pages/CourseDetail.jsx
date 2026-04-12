@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import {
   HiOutlineArrowLeft, HiOutlineCheck, HiOutlineClock,
   HiOutlineAcademicCap, HiOutlineBookOpen, HiOutlineChevronDown,
@@ -353,6 +354,14 @@ export default function CourseDetail() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f4f5f7', fontFamily: 'system-ui, sans-serif' }}>
+      <Helmet>
+        <title>{course?.title ? `${course.title} — Adhyot` : 'Course — Adhyot'}</title>
+        <meta name="description" content={course?.description || 'Learn with structured course content, quizzes and earn a certificate on Adhyot.'} />
+        <meta property="og:title" content={course?.title ? `${course.title} — Adhyot` : 'Course — Adhyot'} />
+        <meta property="og:description" content={course?.description || 'Structured course content, quizzes and certificate on Adhyot.'} />
+        <meta property="og:url" content={`https://adhyotlabs.in/course/${course?.id}`} />
+        <link rel="canonical" href={`https://adhyotlabs.in/course/${course?.id}`} />
+      </Helmet>
       <style>{`
         @keyframes spin   { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }

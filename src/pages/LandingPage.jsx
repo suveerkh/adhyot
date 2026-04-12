@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { HiOutlineViewGrid, HiOutlineLogout, HiOutlineMenuAlt3, HiOutlineX } from 'react-icons/hi'
 import supabase from '../supabaseClient'
 
@@ -376,6 +377,19 @@ function Footer() {
 export default function LandingPage() {
   return (
     <>
+      <Helmet>
+        <title>Adhyot — QA Engineering & Cybersecurity Courses</title>
+        <meta name="description" content="Learn QA Engineering and Cybersecurity with structured courses, quizzes, and career guidance. Free and paid courses available." />
+        <meta name="keywords" content="QA engineering courses, cybersecurity courses, software testing, SDET, selenium, playwright, ethical hacking" />
+        <meta property="og:title" content="Adhyot — QA Engineering & Cybersecurity Courses" />
+        <meta property="og:description" content="Structured courses, quizzes and career guidance for QA and Cybersecurity professionals." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://adhyotlabs.in" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Adhyot — QA Engineering & Cybersecurity Courses" />
+        <meta name="twitter:description" content="Structured courses, quizzes and career guidance for QA and Cybersecurity professionals." />
+        <link rel="canonical" href="https://adhyotlabs.in" />
+      </Helmet>
       <style>{`
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(24px); }

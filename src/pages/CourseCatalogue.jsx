@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import {
   HiOutlineSearch, HiOutlineBookOpen, HiOutlineClock,
   HiOutlineAcademicCap, HiOutlineChevronDown, HiOutlineX,
@@ -361,6 +362,14 @@ export default function CourseCatalogue() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f4f5f7', fontFamily: 'system-ui, sans-serif' }}>
+      <Helmet>
+        <title>Courses — Adhyot</title>
+        <meta name="description" content="Browse QA Engineering and Cybersecurity courses on Adhyot. Free and paid courses with structured content, quizzes and certificates." />
+        <meta property="og:title" content="Courses — Adhyot" />
+        <meta property="og:description" content="Browse QA Engineering and Cybersecurity courses. Free and paid options available." />
+        <meta property="og:url" content="https://adhyotlabs.in/courses" />
+        <link rel="canonical" href="https://adhyotlabs.in/courses" />
+      </Helmet>
       <style>{`
         @keyframes popIn  { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }

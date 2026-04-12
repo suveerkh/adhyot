@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { HiEye, HiEyeOff } from 'react-icons/hi'
 import supabase from '../supabaseClient'
@@ -106,7 +107,13 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="auth-grid" style={{
+    <>
+      <Helmet>
+        <title>{mode === 'login' ? 'Log In' : mode === 'register' ? 'Sign Up' : 'Reset Password'} — Adhyot</title>
+        <meta name="description" content="Log in or create your Adhyot account to access QA Engineering and Cybersecurity courses." />
+        <link rel="canonical" href="https://adhyotlabs.in/auth" />
+      </Helmet>
+      <div className="auth-grid" style={{
       minHeight: '100vh',
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
@@ -375,5 +382,8 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  )
+
+    </>
   )
 }
