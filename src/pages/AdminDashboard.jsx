@@ -370,8 +370,14 @@ function UsersSection() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
 
-  useEffect(() => { fetchUsers() }, [])
+  useEffect(() => {
+    fetchUsers()
+    const handler = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -387,60 +393,75 @@ function UsersSection() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", letterSpacing: '-0.5px' }}>Users</h2>
-        <input
-          style={{ ...inputStyle, width: 240 }}
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", letterSpacing: '-0.5px' }}>
+          Users <span style={{ fontSize: 14, fontWeight: 500, color: '#9ca3af', marginLeft: 6 }}>{filtered.length}</span>
+        </h2>
+        <input style={{ ...inputStyle, width: isMobile ? '100%' : 240 }} placeholder="Search by name or email..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
-      <div className="ad-table" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
-          <thead>
-            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
-              {['Name', 'Email', 'Phone', 'Role', 'Joined'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Loading...</td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>No users found</td></tr>
-            ) : filtered.map((u, i) => (
-              <tr key={u.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
-                <td style={{ padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #E8590C, #ff8c42)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0,
-                    }}>{u.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</div>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#08060d' }}>{u.name}</span>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>Loading...</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af', background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD' }}>No users found</div>
+      ) : isMobile ? (
+        // ── Mobile: card list ──────────────────────────────────────────────
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filtered.map(u => {
+            const initials = u.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'
+            return (
+              <div key={u.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #DDDDDD', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #E8590C, #ff8c42)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#08060d' }}>{u.name}</span>
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, fontWeight: 600, background: u.role === 'admin' ? 'rgba(232,89,12,0.1)' : '#f3f4f6', color: u.role === 'admin' ? '#E8590C' : '#6b7280' }}>{u.role}</span>
                   </div>
-                </td>
-                <td style={{ padding: '14px 16px', fontSize: 14, color: '#6b6375' }}>{u.email}</td>
-                <td style={{ padding: '14px 16px', fontSize: 14, color: '#6b6375' }}>{u.phone || '—'}</td>
-                <td style={{ padding: '14px 16px' }}>
-                  <span style={{
-                    fontSize: 12, padding: '3px 10px', borderRadius: 100, fontWeight: 600,
-                    background: u.role === 'admin' ? 'rgba(232,89,12,0.1)' : '#f3f4f6',
-                    color: u.role === 'admin' ? '#E8590C' : '#6b7280',
-                  }}>{u.role}</span>
-                </td>
-                <td style={{ padding: '14px 16px', fontSize: 13, color: '#9ca3af' }}>
-                  {new Date(u.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </td>
+                  <div style={{ fontSize: 12, color: '#6b6375', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                    {u.phone || '—'} · Joined {new Date(u.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        // ── Desktop: table ─────────────────────────────────────────────────
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
+                {['Name', 'Email', 'Phone', 'Role', 'Joined'].map(h => (
+                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filtered.map((u, i) => (
+                <tr key={u.id} style={{ borderBottom: i < filtered.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+                  <td style={{ padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #E8590C, #ff8c42)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                        {u.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#08060d' }}>{u.name}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '14px 16px', fontSize: 14, color: '#6b6375' }}>{u.email}</td>
+                  <td style={{ padding: '14px 16px', fontSize: 14, color: '#6b6375' }}>{u.phone || '—'}</td>
+                  <td style={{ padding: '14px 16px' }}>
+                    <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 100, fontWeight: 600, background: u.role === 'admin' ? 'rgba(232,89,12,0.1)' : '#f3f4f6', color: u.role === 'admin' ? '#E8590C' : '#6b7280' }}>{u.role}</span>
+                  </td>
+                  <td style={{ padding: '14px 16px', fontSize: 13, color: '#9ca3af' }}>
+                    {new Date(u.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
@@ -449,6 +470,7 @@ function UsersSection() {
 function PaymentsSection() {
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -461,59 +483,96 @@ function PaymentsSection() {
       setLoading(false)
     }
     fetchPayments()
+    const handler = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
   }, [])
 
   const statusColor = (s) => ({
     completed: { bg: '#dcfce7', color: '#16a34a' },
-    pending: { bg: '#fef9c3', color: '#ca8a04' },
-    failed: { bg: '#fef2f2', color: '#ef4444' },
-    refunded: { bg: '#f3f4f6', color: '#6b7280' },
-  }[s] || { bg: '#f3f4f6', color: '#6b7280' })
+    pending:   { bg: '#fef9c3', color: '#ca8a04' },
+    failed:    { bg: '#fef2f2', color: '#ef4444' },
+    refunded:  { bg: '#f3f4f6', color: '#6b7280' },
+  }[s] || { bg: '#f0fdf4', color: '#16a34a' })
 
   return (
     <div>
-      <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 24, letterSpacing: '-0.5px' }}>Payments & Enrollments</h2>
+      <h2 style={{ fontSize: 22, fontWeight: 700, color: '#08060d', fontFamily: "'Georgia', serif", marginBottom: 24, letterSpacing: '-0.5px' }}>
+        Payments & Enrollments <span style={{ fontSize: 14, fontWeight: 500, color: '#9ca3af', marginLeft: 6 }}>{payments.length}</span>
+      </h2>
 
-      <div className="ad-table" style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
-          <thead>
-            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
-              {['Student', 'Course', 'Amount', 'Status', 'Date'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>Loading...</td></tr>
-            ) : payments.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>No enrollments yet</td></tr>
-            ) : payments.map((p, i) => {
-              const sc = statusColor(p.payment_status)
-              return (
-                <tr key={p.id} style={{ borderBottom: i < payments.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#08060d' }}>{p.users?.name}</div>
-                    <div style={{ fontSize: 12, color: '#9ca3af' }}>{p.users?.email}</div>
-                  </td>
-                  <td style={{ padding: '14px 16px', fontSize: 14, color: '#6b6375' }}>{p.courses?.title}</td>
-                  <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 700, color: '#08060d' }}>
-                    {p.amount ? `₹${p.amount?.toLocaleString()}` : 'Free'}
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 100, fontWeight: 600, background: sc.bg, color: sc.color }}>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>Loading...</div>
+      ) : payments.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af', background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD' }}>No enrollments yet</div>
+      ) : isMobile ? (
+        // ── Mobile: card list ──────────────────────────────────────────────
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {payments.map(p => {
+            const sc = statusColor(p.payment_status)
+            const initials = p.users?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'
+            return (
+              <div key={p.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #DDDDDD', padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #E8590C, #ff8c42)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#08060d' }}>{p.users?.name || '—'}</div>
+                  <div style={{ fontSize: 12, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.users?.email}</div>
+                  <div style={{ fontSize: 12, color: '#6b6375', marginTop: 4, fontStyle: 'italic' }}>{p.courses?.title || '—'}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: '#08060d' }}>
+                      {p.amount ? `₹${p.amount.toLocaleString()}` : <span style={{ color: '#16a34a' }}>Free</span>}
+                    </span>
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 100, fontWeight: 600, background: sc.bg, color: sc.color }}>
                       {p.payment_status || 'enrolled'}
                     </span>
-                  </td>
-                  <td style={{ padding: '14px 16px', fontSize: 13, color: '#9ca3af' }}>
-                    {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                      {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        // ── Desktop: table ─────────────────────────────────────────────────
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #DDDDDD', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #DDDDDD' }}>
+                {['Student', 'Course', 'Amount', 'Status', 'Date'].map(h => (
+                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((p, i) => {
+                const sc = statusColor(p.payment_status)
+                return (
+                  <tr key={p.id} style={{ borderBottom: i < payments.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+                    <td style={{ padding: '14px 16px' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#08060d' }}>{p.users?.name}</div>
+                      <div style={{ fontSize: 12, color: '#9ca3af' }}>{p.users?.email}</div>
+                    </td>
+                    <td style={{ padding: '14px 16px', fontSize: 14, color: '#6b6375' }}>{p.courses?.title}</td>
+                    <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 700, color: '#08060d' }}>
+                      {p.amount ? `₹${p.amount?.toLocaleString()}` : 'Free'}
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 100, fontWeight: 600, background: sc.bg, color: sc.color }}>
+                        {p.payment_status || 'enrolled'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px 16px', fontSize: 13, color: '#9ca3af' }}>
+                      {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
