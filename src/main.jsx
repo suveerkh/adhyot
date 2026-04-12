@@ -1,4 +1,5 @@
 import { SpeedInsights } from "@vercel/speed-insights/react"
+import { Analytics } from "@vercel/analytics/react"
 import { HelmetProvider } from 'react-helmet-async'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -11,6 +12,7 @@ createRoot(document.getElementById('root')).render(
     <HelmetProvider>
       <App />
       <SpeedInsights />
+      <Analytics />
     </HelmetProvider>
   </StrictMode>,
 )
